@@ -1,0 +1,3515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant & Hotel POS — 80mm Thermal Billing</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Base Typography & Scrollbars */
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .thermal-mono {
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.45);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.75);
+    }
+
+    /* Sidebar Theme CSS Variables */
+    :root {
+      --sb-bg: #0f172a;
+      --sb-surface: #1e293b;
+      --sb-active: #334155;
+      --sb-accent: #38bdf8;
+      --sb-border: rgba(255, 255, 255, 0.12);
+
+      /* Active Highlight & Live Cursor CSS Variables */
+      --hl-color: #f97316;
+      --hl-bg: rgba(249, 115, 22, 0.11);
+      --hl-ring: rgba(249, 115, 22, 0.32);
+      --hl-text: #ffffff;
+    }
+
+    /* High-Visibility Active Selection & Live Cursor Focus Styles */
+    .hl-active-btn {
+      background-color: var(--hl-color) !important;
+      color: var(--hl-text) !important;
+      border-color: var(--hl-color) !important;
+      box-shadow: 0 0 0 3px var(--hl-ring), 0 4px 10px -2px var(--hl-ring) !important;
+    }
+
+    @keyframes hlPulseRing {
+      0%, 100% {
+        box-shadow: 0 0 0 3px var(--hl-ring), 0 4px 12px -2px var(--hl-ring);
+      }
+      50% {
+        box-shadow: 0 0 0 5px var(--hl-ring), 0 6px 16px -2px var(--hl-ring);
+      }
+    }
+
+    .hl-table-active {
+      background-color: var(--hl-color) !important;
+      color: var(--hl-text) !important;
+      border-color: var(--hl-color) !important;
+      animation: hlPulseRing 1.9s ease-in-out infinite;
+    }
+
+    .hl-live-badge {
+      background-color: var(--hl-bg);
+      color: var(--hl-color);
+      border: 1.5px solid var(--hl-color);
+    }
+
+    /* Live Cursor Focus Highlight on Inputs, Selects & Focusable Controls */
+    #app-shell input[type="text"]:focus,
+    #app-shell input[type="number"]:focus,
+    #app-shell input[type="tel"]:focus,
+    #app-shell input[type="date"]:focus,
+    #app-shell select:focus {
+      outline: none !important;
+      border-color: var(--hl-color) !important;
+      border-width: 2.5px !important;
+      background-color: var(--hl-bg) !important;
+      box-shadow: 0 0 0 4px var(--hl-ring) !important;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+    }
+
+    #app-shell button:focus-visible {
+      outline: 2.5px solid var(--hl-color) !important;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px var(--hl-ring) !important;
+    }
+
+    .sidebar-themed {
+      background-color: var(--sb-bg);
+      border-right: 1px solid var(--sb-border);
+    }
+    .sidebar-item:hover {
+      background-color: var(--sb-surface);
+    }
+    .sidebar-item-active {
+      background-color: var(--sb-active);
+      box-shadow: inset 3px 0 0 0 var(--sb-accent);
+    }
+
+    /* Thermal Receipt Helper Classes (Used both in Preview Modal & #print-area) */
+    .thermal-receipt-box {
+      width: 100%;
+      max-width: 80mm;
+      margin: 0 auto;
+      background: #ffffff;
+      color: #000000;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .thermal-divider-dashed {
+      border-top: 1px dashed #000000;
+      margin: 6px 0;
+    }
+    .thermal-divider-solid {
+      border-top: 1.5px solid #000000;
+      margin: 6px 0;
+    }
+    .thermal-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .thermal-table th,
+    .thermal-table td {
+      padding: 2px 1px;
+      vertical-align: top;
+      color: #000000;
+    }
+
+    /* Dedicated Print Area: Hidden on Screen */
+    #print-area {
+      display: none;
+    }
+
+    /* Custom Range Slider for Safe Reset */
+    input[type="range"].safe-reset-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"].safe-reset-slider::-webkit-slider-runnable-track {
+      height: 14px;
+      border-radius: 9999px;
+      background: #fecdd3;
+      border: 1px solid #fda4af;
+    }
+    input[type="range"].safe-reset-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: #e11d48;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      margin-top: -8px;
+    }
+    input[type="range"].safe-reset-slider::-moz-range-track {
+      height: 14px;
+      border-radius: 9999px;
+      background: #fecdd3;
+      border: 1px solid #fda4af;
+    }
+    input[type="range"].safe-reset-slider::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: #e11d48;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ============================================================
+       BULLETPROOF 80mm THERMAL POS PRINT STYLES (@media print)
+       ============================================================ */
+    @media print {
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+
+      html, body {
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        overflow: visible !important;
+        height: auto !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      #app-shell,
+      #modal-backdrop,
+      #print-preview-modal,
+      #toast-container {
+        display: none !important;
+      }
+
+      #print-area {
+        display: block !important;
+        position: static !important;
+        width: 80mm !important;
+        max-width: 80mm !important;
+        margin: 0 !important;
+        padding: 3mm !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased selection:bg-sky-200 selection:text-slate-900">
+
+  <!-- ============================================================
+       MAIN APPLICATION SHELL (HIDDEN DURING 80mm THERMAL PRINT)
+       ============================================================ -->
+  <div id="app-shell" class="flex h-screen w-full overflow-hidden">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/50 backdrop-blur-xs lg:hidden" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- LEFT NAVIGATION SIDEBAR -->
+    <aside id="sidebar" class="sidebar-themed fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col text-slate-100 transition-transform duration-200 lg:static lg:translate-x-0">
+      <!-- Brand Header -->
+      <div class="flex items-center justify-between border-b border-white/10 px-4 py-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-lg font-extrabold text-white shadow-inner">
+            🍽️
+          </div>
+          <div class="min-w-0">
+            <h1 id="sidebar-shop-name" class="truncate text-sm font-bold tracking-tight text-white">Annapoorna Grand</h1>
+            <p class="text-[11px] text-slate-300/80">Restaurant POS • 80mm</p>
+          </div>
+        </div>
+        <button type="button" onclick="toggleMobileSidebar(false)" class="rounded-lg p-1.5 text-slate-300 hover:bg-white/10 lg:hidden" aria-label="Close Sidebar">
+          ✕
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <button type="button" onclick="switchView('pos')" data-nav="pos" class="sidebar-item sidebar-item-active flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-white transition">
+          <span class="text-base">🧾</span>
+          <span class="flex-1">POS Billing</span>
+          <kbd class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-slate-200">F2</kbd>
+        </button>
+
+        <button type="button" onclick="switchView('tables')" data-nav="tables" class="sidebar-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-slate-200 transition">
+          <span class="text-base">🪑</span>
+          <span class="flex-1">Live Tables</span>
+          <span id="nav-occupied-badge" class="hidden rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-slate-950">0</span>
+        </button>
+
+        <button type="button" onclick="switchView('menu')" data-nav="menu" class="sidebar-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-slate-200 transition">
+          <span class="text-base">📋</span>
+          <span class="flex-1">Menu & Availability</span>
+          <span id="nav-soldout-badge" class="hidden rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">0</span>
+        </button>
+
+        <button type="button" onclick="switchView('reports')" data-nav="reports" class="sidebar-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-slate-200 transition">
+          <span class="text-base">📊</span>
+          <span class="flex-1">Sales & Reports</span>
+        </button>
+
+        <button type="button" onclick="switchView('printer')" data-nav="printer" class="sidebar-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-slate-200 transition">
+          <span class="text-base">🖨️</span>
+          <span class="flex-1">Printer Settings</span>
+          <span id="nav-printer-badge" class="rounded-full bg-slate-600 px-2 py-0.5 text-[10px] font-bold text-slate-200">Setup</span>
+        </button>
+
+        <button type="button" onclick="switchView('settings')" data-nav="settings" class="sidebar-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-slate-200 transition">
+          <span class="text-base">⚙️</span>
+          <span class="flex-1">Settings & Backup</span>
+        </button>
+      </nav>
+
+      <!-- Manual 6-Theme Swatch Selector -->
+      <div class="border-t border-white/10 px-4 py-3 space-y-3">
+        <div>
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-300/80">Sidebar Theme</span>
+            <span id="sidebar-theme-label" class="text-[10px] text-slate-300">Slate Dark</span>
+          </div>
+          <div id="sidebar-theme-swatches" class="flex items-center gap-2"></div>
+        </div>
+
+        <!-- Dedicated 6-Swatch Highlight Color Selector -->
+        <div class="border-t border-white/10 pt-2.5">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-300/80">Highlight Color</span>
+            <span id="highlight-color-label" class="text-[10px] font-semibold text-white">Vivid Orange</span>
+          </div>
+          <div id="sidebar-highlight-swatches" class="flex items-center gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Live Clock Footer -->
+      <div class="border-t border-white/10 bg-black/20 px-4 py-2.5 text-xs text-slate-300">
+        <div class="flex items-center justify-between">
+          <span id="live-date">--</span>
+          <span id="live-clock" class="font-mono font-semibold text-white">--:--</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN CONTENT AREA -->
+    <div class="flex flex-1 flex-col min-w-0 overflow-hidden">
+
+      <!-- Compact Top Header -->
+      <header class="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="toggleMobileSidebar(true)" class="rounded-lg border border-slate-200 p-2 text-slate-700 hover:bg-slate-100 lg:hidden" aria-label="Open Sidebar">
+            ☰
+          </button>
+          <h2 id="view-title" class="text-base font-bold text-slate-800 sm:text-lg">POS Billing Counter</h2>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="hidden xl:flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
+            <span><kbd class="rounded bg-white px-1.5 py-0.5 font-bold text-slate-800 shadow-2xs">F2</kbd> Code</span>
+            <span class="text-slate-300">|</span>
+            <span><kbd class="rounded bg-white px-1.5 py-0.5 font-bold text-slate-800 shadow-2xs">F4</kbd> KOT & Hold</span>
+            <span class="text-slate-300">|</span>
+            <span><kbd class="rounded bg-white px-1.5 py-0.5 font-bold text-slate-800 shadow-2xs">F8</kbd> Settle & Print</span>
+            <span class="text-slate-300">|</span>
+            <span><kbd class="rounded bg-white px-1.5 py-0.5 font-bold text-slate-800 shadow-2xs">F9</kbd> Clear</span>
+          </div>
+          <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+            Today: <span id="header-today-sales">₹0</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============================================================
+           VIEW 1: POS BILLING COUNTER
+           ============================================================ -->
+      <section id="view-pos" class="flex flex-1 flex-col overflow-hidden lg:flex-row">
+
+        <!-- LEFT: Order Controls, Quick Tables, Fast Entry & Dish Grid -->
+        <div class="flex flex-1 flex-col overflow-hidden border-b border-slate-200 bg-slate-50/70 lg:border-b-0 lg:border-r">
+
+          <!-- Compact Live Cursor & Active Order Status Bar -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-2 text-[11px]">
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="live-status-order-type" class="hl-active-btn inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-extrabold">
+                <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                <span>DINE-IN</span>
+              </span>
+              <span id="live-status-table" class="hl-live-badge inline-flex items-center rounded-full px-2.5 py-0.5 font-extrabold">
+                🪑 Table T1
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span id="live-status-cursor" class="hl-live-badge rounded-full px-2.5 py-0.5 font-bold">Cursor: Item Code</span>
+            </div>
+          </div>
+
+          <!-- Order Type Tabs & Table Dropdown -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-2.5">
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-bold">
+              <button type="button" id="tab-type-dinein" onclick="setOrderType('Dine-In')" data-focus-label="Dine-In Mode" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition">🍽️ Dine-In</button>
+              <button type="button" id="tab-type-takeaway" onclick="setOrderType('Takeaway')" data-focus-label="Takeaway Mode" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition">🛍️ Takeaway</button>
+              <button type="button" id="tab-type-delivery" onclick="setOrderType('Delivery')" data-focus-label="Delivery Mode" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition">🛵 Delivery</button>
+            </div>
+
+            <div id="pos-table-selector-wrap" class="flex items-center gap-2 text-xs">
+              <label for="pos-table-select" class="font-bold text-slate-600">Table:</label>
+              <select id="pos-table-select" onchange="handlePosTableChange(this.value)" data-focus-label="Table Select" class="rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 font-bold text-slate-800"></select>
+              <span id="pos-table-status-pill" class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">Vacant</span>
+            </div>
+          </div>
+
+          <!-- Quick Table Bar (T1 - T12) -->
+          <div id="pos-quick-tables-wrap" class="border-b border-slate-200 bg-slate-50 px-4 py-2">
+            <div id="pos-quick-tables-bar" class="grid grid-cols-6 gap-1.5 sm:grid-cols-12"></div>
+          </div>
+
+          <!-- Fast Keyboard Entry Bar (F2 -> Code -> Enter -> Qty -> Enter) -->
+          <div class="border-b border-slate-200 bg-white px-4 py-2.5">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="relative flex-1 min-w-[180px]">
+                <input
+                  id="fast-item-input"
+                  type="text"
+                  autocomplete="off"
+                  data-focus-label="Item Code"
+                  placeholder="Type code (001) or dish name [F2]..."
+                  class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-900 placeholder:text-slate-400"
+                />
+                <div id="fast-autocomplete" class="absolute left-0 right-0 top-full z-30 mt-1 hidden max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl divide-y divide-slate-100"></div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <label for="fast-qty-input" class="text-xs font-bold text-slate-500">Qty</label>
+                <input
+                  id="fast-qty-input"
+                  type="number"
+                  min="1"
+                  value="1"
+                  data-focus-label="Qty"
+                  class="w-16 rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-2 text-center text-xs font-extrabold text-slate-900"
+                />
+              </div>
+              <button type="button" onclick="addFastEntryItem()" class="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 active:scale-95">
+                + Add [Enter]
+              </button>
+            </div>
+          </div>
+
+          <!-- Category Tabs & Visual Search -->
+          <div class="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 pb-2">
+            <div id="pos-category-tabs" class="flex flex-wrap items-center gap-1.5"></div>
+            <div class="relative w-full sm:w-52">
+              <input
+                id="pos-grid-search"
+                type="text"
+                oninput="renderPosMenuGrid()"
+                data-focus-label="Filter Menu"
+                placeholder="Filter dishes..."
+                class="w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-3 pr-7 text-xs font-medium text-slate-700"
+              />
+              <button id="pos-grid-search-clear" type="button" onclick="clearPosGridSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+          </div>
+
+          <!-- Menu Cards Grid -->
+          <div class="flex-1 overflow-y-auto px-4 pb-4">
+            <div id="pos-menu-grid" class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Active Order Cart & Billing Summary -->
+        <div class="flex w-full shrink-0 flex-col bg-white lg:w-[390px] xl:w-[420px]">
+
+          <!-- Edit Bill Banner -->
+          <div id="pos-edit-banner" class="hidden items-center justify-between bg-amber-100 px-4 py-2 text-xs font-bold text-amber-900 border-b border-amber-300">
+            <span>✏️ Editing <span id="pos-edit-bill-no" class="font-mono">BILL-001</span></span>
+            <button type="button" onclick="cancelEditMode()" class="rounded-lg bg-amber-800 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-amber-900">Cancel Edit [Esc]</button>
+          </div>
+
+          <!-- Cart Header -->
+          <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-extrabold text-slate-900">Current Order</h3>
+                <span id="pos-bill-badge" class="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700">BILL-001</span>
+              </div>
+              <p id="cart-meta-subtitle" class="text-[11px] font-medium text-slate-500">Dine-In • Table T1</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="cart-item-count" class="rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-bold text-sky-700">0 items</span>
+              <button type="button" onclick="clearCurrentOrder(true)" title="Clear Cart [F9]" class="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600">
+                Clear [F9]
+              </button>
+            </div>
+          </div>
+
+          <!-- Optional Customer Details -->
+          <div class="grid grid-cols-2 gap-2 border-b border-slate-100 bg-slate-50/70 px-4 py-2">
+            <input id="pos-cust-name" type="text" oninput="updateCurrentOrderMeta()" data-focus-label="Customer Name" placeholder="Customer name (opt.)" class="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs" />
+            <input id="pos-cust-phone" type="tel" oninput="updateCurrentOrderMeta()" data-focus-label="Customer Phone" placeholder="Phone (opt.)" class="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs" />
+          </div>
+
+          <!-- Cart Items List -->
+          <div id="cart-items-container" class="flex-1 overflow-y-auto divide-y divide-slate-100 px-4"></div>
+
+          <!-- Billing Totals, Sticky Parcel/GST & Payment Actions -->
+          <div class="border-t border-slate-200 bg-slate-50/80 px-4 py-3 space-y-2.5">
+            <div class="space-y-1.5 text-xs">
+              <div class="flex items-center justify-between text-slate-600">
+                <span>Subtotal</span>
+                <span id="bill-subtotal" class="font-bold text-slate-800">₹0.00</span>
+              </div>
+
+              <!-- Sticky Parcel Charge Checkbox Row -->
+              <div class="flex items-center justify-between gap-2 text-slate-700">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input id="bill-parcel-toggle" type="checkbox" onchange="handleParcelToggleChange()" data-focus-label="Parcel Toggle" class="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+                  <span class="font-semibold">Apply Parcel (₹)</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <input
+                    id="bill-parcel-input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value="0"
+                    disabled
+                    oninput="handleParcelAmountInput()"
+                    data-focus-label="Parcel Amount"
+                    class="w-16 rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-right text-xs font-bold text-slate-900 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                  <span id="bill-parcel-amount" class="w-16 text-right font-bold text-slate-800">₹0.00</span>
+                </div>
+              </div>
+
+              <!-- Sticky GST Checkbox Row -->
+              <div class="flex items-center justify-between text-slate-700">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input id="bill-gst-toggle" type="checkbox" onchange="handleGstToggleChange()" data-focus-label="GST Toggle" class="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+                  <span id="bill-gst-label" class="font-semibold">Apply GST (5%)</span>
+                </label>
+                <span id="bill-gst-amount" class="font-bold text-slate-800">₹0.00</span>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Round Off</span>
+                <span id="bill-roundoff">₹0.00</span>
+              </div>
+
+              <div class="flex items-center justify-between border-t border-slate-200 pt-2 text-base font-extrabold text-slate-900">
+                <span>GRAND TOTAL</span>
+                <span id="bill-grand-total" class="text-emerald-700">₹0</span>
+              </div>
+            </div>
+
+            <!-- Payment Mode Selector -->
+            <div class="grid grid-cols-3 gap-2 text-xs font-bold">
+              <button type="button" data-pay="Cash" onclick="setPaymentMode('Cash')" data-focus-label="Pay Cash" class="pay-mode-btn rounded-xl border border-slate-200 bg-white py-2 text-slate-700 transition">💵 Cash</button>
+              <button type="button" data-pay="UPI" onclick="setPaymentMode('UPI')" data-focus-label="Pay UPI" class="pay-mode-btn rounded-xl border border-slate-200 bg-white py-2 text-slate-700 transition">📱 UPI</button>
+              <button type="button" data-pay="Card" onclick="setPaymentMode('Card')" data-focus-label="Pay Card" class="pay-mode-btn rounded-xl border border-slate-200 bg-white py-2 text-slate-700 transition">💳 Card</button>
+            </div>
+
+            <!-- Primary Action Buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-0.5">
+              <button type="button" onclick="handlePrintKotAndHold()" class="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2.5 text-xs font-extrabold text-slate-950 shadow-xs hover:bg-amber-600 active:scale-95">
+                <span>🧾 KOT & Hold</span>
+                <kbd class="rounded bg-black/15 px-1.5 py-0.5 text-[10px]">F4</kbd>
+              </button>
+              <button id="btn-settle-print" type="button" onclick="handleSettleAndPrint()" class="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-700 active:scale-95">
+                <span>🖨️ Settle & Print</span>
+                <kbd class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">F8</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW 2: LIVE TABLES & RUNNING ORDERS (T1 - T12)
+           ============================================================ -->
+      <section id="view-tables" class="hidden flex-1 overflow-y-auto p-4 sm:p-6">
+        <div class="mx-auto max-w-6xl space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-900">Live Dining Hall (T1 – T12)</h3>
+              <p class="text-xs text-slate-500">Click any table to open or settle its running order directly in POS.</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-bold">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Vacant: <span id="tables-vacant-count">12</span></span>
+              <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-900">Occupied: <span id="tables-occupied-count">0</span></span>
+            </div>
+          </div>
+          <div id="tables-grid" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW 3: MENU & AVAILABILITY MANAGER
+           ============================================================ -->
+      <section id="view-menu" class="hidden flex-1 overflow-y-auto p-4 sm:p-6">
+        <div class="mx-auto max-w-6xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-900">Menu & Instant Sold-Out Controls</h3>
+              <p class="text-xs text-slate-500">Toggle items Sold Out in one click to lock them on the POS grid immediately.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="setAllMenuAvailability(true)" class="rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
+                ✓ Mark All Available
+              </button>
+              <button type="button" onclick="openMenuModal()" class="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-sky-700">
+                + Add Menu Item
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-xs">
+            <input id="menu-mgr-search" type="text" oninput="renderMenuManager()" placeholder="Search code or dish name..." class="flex-1 min-w-[180px] rounded-xl border border-slate-300 px-3 py-2" />
+            <select id="menu-mgr-cat" onchange="renderMenuManager()" class="rounded-xl border border-slate-300 px-3 py-2 font-semibold">
+              <option value="All">All Categories</option>
+              <option value="Tiffin">Tiffin</option>
+              <option value="Meals">Meals</option>
+              <option value="Snacks">Snacks</option>
+              <option value="Beverages">Beverages</option>
+            </select>
+            <select id="menu-mgr-avail" onchange="renderMenuManager()" class="rounded-xl border border-slate-300 px-3 py-2 font-semibold">
+              <option value="all">All Status</option>
+              <option value="available">Available Only</option>
+              <option value="soldout">Sold Out Only</option>
+            </select>
+          </div>
+
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-500">
+                  <tr>
+                    <th class="px-4 py-3">Code</th>
+                    <th class="px-4 py-3">Dish Name</th>
+                    <th class="px-4 py-3">Category</th>
+                    <th class="px-4 py-3 text-right">Price</th>
+                    <th class="px-4 py-3 text-center">Status</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="menu-mgr-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW 4: SALES & REPORTS
+           ============================================================ -->
+      <section id="view-reports" class="hidden flex-1 overflow-y-auto p-4 sm:p-6">
+        <div class="mx-auto max-w-6xl space-y-5">
+          <!-- KPI Cards -->
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <div class="text-[11px] font-bold uppercase text-slate-400">Today's Sales</div>
+              <div id="kpi-today-sales" class="mt-1 text-2xl font-extrabold text-emerald-700">₹0</div>
+              <div id="kpi-today-bills" class="mt-1 text-[11px] text-slate-500">0 bills today</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <div class="text-[11px] font-bold uppercase text-slate-400">Bills Count (Today)</div>
+              <div id="kpi-today-bills-big" class="mt-1 text-2xl font-extrabold text-slate-900">0</div>
+              <div id="kpi-total-bills-sub" class="mt-1 text-[11px] text-slate-500">0 total bills all time</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <div class="text-[11px] font-bold uppercase text-slate-400">This Month Sales</div>
+              <div id="kpi-month-sales" class="mt-1 text-2xl font-extrabold text-sky-700">₹0</div>
+              <div id="kpi-month-bills" class="mt-1 text-[11px] text-slate-500">0 bills this month</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <div class="text-[11px] font-bold uppercase text-slate-400">Today's Payment Split</div>
+              <div class="mt-1.5 space-y-0.5 text-xs">
+                <div class="flex justify-between"><span class="text-slate-500">Cash:</span><span id="kpi-pay-cash" class="font-bold text-slate-800">₹0</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">UPI:</span><span id="kpi-pay-upi" class="font-bold text-slate-800">₹0</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Card:</span><span id="kpi-pay-card" class="font-bold text-slate-800">₹0</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter & Print Sales Report Bar -->
+          <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 text-xs">
+            <div class="flex flex-wrap items-center gap-2 flex-1">
+              <input id="report-search" type="text" oninput="renderReports()" placeholder="Search bill no, table, customer, mode..." class="flex-1 min-w-[180px] rounded-xl border border-slate-300 px-3 py-2" />
+              <input id="report-from-date" type="date" onchange="renderReports()" class="rounded-xl border border-slate-300 px-2.5 py-2" />
+              <input id="report-to-date" type="date" onchange="renderReports()" class="rounded-xl border border-slate-300 px-2.5 py-2" />
+              <button type="button" onclick="clearReportFilters()" class="rounded-xl border border-slate-300 px-3 py-2 font-semibold text-slate-600 hover:bg-slate-50">Reset</button>
+            </div>
+            <button type="button" onclick="handlePrintSalesReport()" class="rounded-xl bg-slate-900 px-4 py-2 font-bold text-white shadow-xs hover:bg-slate-800 active:scale-95">
+              🖨️ Print Sales Report (80mm)
+            </button>
+          </div>
+
+          <!-- Bills History Table -->
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-500">
+                  <tr>
+                    <th class="px-4 py-3">Bill No</th>
+                    <th class="px-4 py-3">Date & Time</th>
+                    <th class="px-4 py-3">Order / Table</th>
+                    <th class="px-4 py-3">Payment</th>
+                    <th class="px-4 py-3 text-right">Amount</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="report-bills-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW 4.5: SIMPLE PRINTER SETTINGS (POS THERMAL & LASERJET)
+           ============================================================ -->
+      <section id="view-printer" class="hidden flex-1 overflow-y-auto p-4 sm:p-6">
+        <div class="mx-auto max-w-2xl space-y-4">
+
+          <!-- Simple Status Card -->
+          <div id="printer-status-card" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-2xs">
+            <div class="flex items-center gap-3">
+              <div id="printer-status-icon" class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-2xl">🖨️</div>
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="text-sm font-extrabold text-slate-900">Printer Settings</h3>
+                  <span id="printer-status-pill" class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">Ready</span>
+                </div>
+                <p id="printer-status-desc" class="mt-0.5 text-xs text-slate-500">Select your POS Thermal or LaserJet printer and save.</p>
+              </div>
+            </div>
+            <button type="button" onclick="testSimplePrinter()" class="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 active:scale-95">
+              🧪 Test Print
+            </button>
+          </div>
+
+          <!-- Single Simple Configuration Form -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-5 text-xs">
+
+            <!-- Step 1: Choose Printer Type -->
+            <div>
+              <label class="mb-2 block text-xs font-extrabold text-slate-800">1. Choose Your Printer Type</label>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button type="button" id="btn-pr-type-thermal" onclick="selectSimplePrinterType('thermal')" class="flex items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition">
+                  <span class="text-2xl">🧾</span>
+                  <div>
+                    <div class="text-xs font-extrabold text-slate-900">POS Thermal Printer</div>
+                    <div class="text-[11px] text-slate-500">80mm / 58mm Receipt Roll</div>
+                  </div>
+                </button>
+                <button type="button" id="btn-pr-type-laser" onclick="selectSimplePrinterType('laser')" class="flex items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition">
+                  <span class="text-2xl">🖨️</span>
+                  <div>
+                    <div class="text-xs font-extrabold text-slate-900">LaserJet / Normal Printer</div>
+                    <div class="text-[11px] text-slate-500">A4 Sheet Printer</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2: Select Connected Printer on PC -->
+            <div class="space-y-2.5 border-t border-slate-100 pt-4">
+              <label for="pr-simple-name" class="block text-xs font-extrabold text-slate-800">2. Select Printer Connected to PC</label>
+              <input
+                id="pr-simple-name"
+                type="text"
+                placeholder="e.g. POS-80 Thermal Printer or HP LaserJet"
+                class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white"
+              />
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="openPcPrinterSelector()" class="rounded-xl bg-sky-600 px-4 py-2 text-xs font-extrabold text-white shadow-xs hover:bg-sky-700 active:scale-95">
+                  🖨️ Select Connected PC Printer
+                </button>
+                <button type="button" id="btn-connect-usb-simple" onclick="connectSimpleUsbPrinter()" class="rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:scale-95">
+                  🔌 Direct USB (Silent POS)
+                </button>
+                <button type="button" id="btn-disconnect-usb-simple" onclick="disconnectSimpleUsbPrinter()" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100">
+                  ✕ Disconnect USB
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500">
+                Click <strong>Select Connected PC Printer</strong> to choose between your <strong>POS Thermal</strong> and <strong>LaserJet</strong> in your PC's printer list.
+              </p>
+
+              <!-- Compact Preview Notice (Only shown if running inside online preview iframe) -->
+              <div id="printer-iframe-notice" class="hidden flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                <span>💡 For direct USB silent printing on your PC, download and open this POS file locally.</span>
+                <button type="button" onclick="downloadLocalPosHtml()" class="rounded-lg bg-amber-600 px-2.5 py-1 font-bold text-white hover:bg-amber-700">
+                  ⬇️ Download POS (.html)
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 3: Paper Size & Auto-Print -->
+            <div class="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
+              <div>
+                <label for="pr-paper-size" class="mb-1 block font-bold text-slate-700">Paper Size</label>
+                <select id="pr-paper-size" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-bold text-slate-800">
+                  <option value="80mm">80mm Thermal Roll</option>
+                  <option value="58mm">58mm Thermal Roll</option>
+                  <option value="A4">A4 Sheet (LaserJet)</option>
+                </select>
+              </div>
+              <div>
+                <label for="pr-copies" class="mb-1 block font-bold text-slate-700">Print Copies</label>
+                <select id="pr-copies" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-bold text-slate-800">
+                  <option value="1">1 Copy</option>
+                  <option value="2">2 Copies</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-5 pt-1">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="pr-auto-print" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+                <span class="font-bold text-slate-800">⚡ Auto-Print directly (skip preview popup)</span>
+              </label>
+              <label id="pr-autocut-wrap" class="flex items-center gap-2 cursor-pointer">
+                <input id="pr-autocut" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+                <span class="font-bold text-slate-700">✂️ Auto-Cut (Thermal)</span>
+              </label>
+            </div>
+
+            <!-- Step 4: Save Button -->
+            <div class="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+              <button type="button" onclick="saveSimplePrinterSettings()" class="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-sm hover:bg-emerald-700 active:scale-95">
+                💾 Save Printer Settings
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW 5: SETTINGS, THEMES, BACKUP & SAFE RESET
+           ============================================================ -->
+      <section id="view-settings" class="hidden flex-1 overflow-y-auto p-4 sm:p-6">
+        <div class="mx-auto max-w-4xl space-y-5">
+
+          <!-- Restaurant Profile & Receipt Details -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+            <h3 class="text-sm font-extrabold text-slate-900">Restaurant Details (Printed on 80mm Receipt)</h3>
+            <p class="mt-0.5 text-xs text-slate-500">Update your hotel/restaurant header, FSSAI, GSTIN, and default GST rate.</p>
+            <form onsubmit="saveSettingsForm(event)" class="mt-4 grid grid-cols-1 gap-3.5 text-xs sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <label class="mb-1 block font-semibold text-slate-700">Restaurant / Hotel Name *</label>
+                <input id="set-name" type="text" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-semibold text-slate-900" />
+              </div>
+              <div class="sm:col-span-2">
+                <label class="mb-1 block font-semibold text-slate-700">Address</label>
+                <input id="set-address" type="text" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900" />
+              </div>
+              <div>
+                <label class="mb-1 block font-semibold text-slate-700">Phone</label>
+                <input id="set-phone" type="text" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900" />
+              </div>
+              <div>
+                <label class="mb-1 block font-semibold text-slate-700">FSSAI License No.</label>
+                <input id="set-fssai" type="text" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-slate-900" />
+              </div>
+              <div>
+                <label class="mb-1 block font-semibold text-slate-700">GSTIN</label>
+                <input id="set-gstin" type="text" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono uppercase text-slate-900" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="mb-1 block font-semibold text-slate-700">Default GST %</label>
+                  <input id="set-gst-rate" type="number" min="0" max="28" step="0.5" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-bold text-slate-900" />
+                </div>
+                <div>
+                  <label class="mb-1 block font-semibold text-slate-700">Default Parcel (₹)</label>
+                  <input id="set-parcel-charge" type="number" min="0" step="1" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-bold text-slate-900" />
+                </div>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="mb-1 block font-semibold text-slate-700">Receipt Footer Note</label>
+                <input id="set-footer" type="text" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900" />
+              </div>
+              <div class="sm:col-span-2 flex justify-end pt-1">
+                <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-700 active:scale-95">
+                  💾 Save Restaurant Settings
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Sidebar Theme & Highlight Color -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-3">
+              <h4 class="text-sm font-extrabold text-slate-900">Sidebar Theme</h4>
+              <div id="settings-theme-grid" class="grid grid-cols-2 gap-2.5"></div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-3">
+              <h4 class="text-sm font-extrabold text-slate-900">Active Highlight & Cursor Color</h4>
+              <div id="settings-highlight-grid" class="grid grid-cols-2 gap-2.5"></div>
+            </div>
+          </div>
+
+          <!-- JSON Backup & Restore -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 class="text-sm font-extrabold text-slate-900">Offline Data Backup & Restore (JSON)</h4>
+              <p class="text-xs text-slate-500">Export all bills, menu items, and settings to a JSON file or restore anytime.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="exportJsonBackup()" class="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800">
+                ⬇️ Export Backup (.json)
+              </button>
+              <label class="cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                ⬆️ Restore Backup
+                <input type="file" accept=".json,application/json" onchange="importJsonBackup(event)" class="hidden" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Slide-to-Confirm Safe Factory Reset -->
+          <div class="rounded-2xl border-2 border-rose-200 bg-rose-50/60 p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-extrabold text-rose-900">⚠️ Safe Factory Reset</h4>
+                <p class="text-xs text-rose-700">Automatically downloads a safety JSON backup before clearing bills & resetting defaults.</p>
+              </div>
+              <span id="safe-reset-percent" class="rounded-full bg-rose-100 px-3 py-1 font-mono text-xs font-extrabold text-rose-800">0%</span>
+            </div>
+            <input
+              id="safe-reset-slider"
+              type="range"
+              min="0"
+              max="100"
+              value="0"
+              oninput="handleSafeResetSliderInput(this.value)"
+              onchange="handleSafeResetSliderRelease(this.value)"
+              class="safe-reset-slider w-full"
+            />
+            <p class="text-[11px] font-semibold text-rose-600">Slide all the way to 100% and release to backup & reset.</p>
+          </div>
+
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       80mm PRINT PREVIEW MODAL (ALWAYS SHOWN ON PRINT / REPRINT / KOT)
+       ============================================================ -->
+  <div id="print-preview-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/70 p-4 backdrop-blur-xs">
+    <div class="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-slate-100 shadow-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+        <div>
+          <h3 id="print-preview-title" class="text-sm font-extrabold text-slate-900">80mm Thermal Receipt Preview</h3>
+          <p class="text-[11px] text-slate-500">Thermal 80mm layout • Ready to print</p>
+        </div>
+        <button type="button" onclick="closePrintPreviewModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close Preview">✕</button>
+      </div>
+
+      <!-- Scrollable 80mm Paper Preview -->
+      <div class="flex-1 overflow-y-auto p-4">
+        <div id="print-preview-content" class="mx-auto w-full max-w-[320px] rounded-xl border border-slate-300 bg-white p-4 shadow-md"></div>
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-3">
+        <button type="button" onclick="closePrintPreviewModal()" class="rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+          Close [Esc]
+        </button>
+        <button type="button" onclick="triggerPrintNow()" class="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-extrabold text-white shadow-sm hover:bg-emerald-700 active:scale-95">
+          <span>🖨️ Print</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODALS: ADD/EDIT MENU ITEM & CONFIRMATION DIALOG
+       ============================================================ -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+
+    <!-- Add / Edit Menu Item Modal -->
+    <div id="menu-item-modal" class="hidden w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="menu-modal-title" class="text-base font-bold text-slate-900">Add Menu Item</h3>
+        <button type="button" onclick="closeAllModals()" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">✕</button>
+      </div>
+      <form id="menu-item-form" onsubmit="saveMenuItemForm(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="mm-edit-id" />
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="mb-1 block font-semibold text-slate-700">Item Code *</label>
+            <input id="mm-code" type="text" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm font-bold focus:border-sky-500 focus:bg-white focus:outline-none" />
+          </div>
+          <div class="col-span-2">
+            <label class="mb-1 block font-semibold text-slate-700">Category *</label>
+            <select id="mm-category" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium focus:border-sky-500 focus:outline-none">
+              <option value="Tiffin">Tiffin</option>
+              <option value="Meals">Meals</option>
+              <option value="Snacks">Snacks</option>
+              <option value="Beverages">Beverages</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block font-semibold text-slate-700">Item Name *</label>
+          <input id="mm-name" type="text" required placeholder="e.g. Ghee Masala Dosa" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="mb-1 block font-semibold text-slate-700">Price (₹) *</label>
+            <input id="mm-price" type="number" min="0" step="1" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold focus:border-sky-500 focus:outline-none" />
+          </div>
+          <div class="flex items-end pb-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="mm-available" type="checkbox" checked class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+              <span class="font-bold text-slate-700">Available</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeAllModals()" class="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="rounded-xl bg-sky-600 px-5 py-2 font-bold text-white hover:bg-sky-700">Save Item</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="hidden w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+      <h3 id="confirm-modal-title" class="text-base font-bold text-slate-900">Confirm Action</h3>
+      <p id="confirm-modal-msg" class="mt-2 text-xs text-slate-600 leading-relaxed"></p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button type="button" onclick="closeAllModals()" class="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button type="button" id="confirm-modal-ok" class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">Confirm</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ============================================================
+       DEDICATED 80mm THERMAL PRINT CONTAINER (ONLY VISIBLE IN PRINT)
+       ============================================================ -->
+  <div id="print-area"></div>
+  <iframe id="thermal-print-frame" title="80mm Thermal Print Frame" style="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;"></iframe>
+
+  <!-- ============================================================
+       APPLICATION JAVASCRIPT ENGINE
+       ============================================================ -->
+  <script>
+    'use strict';
+
+    // ------------------------------------------------------------
+    // 1. CONSTANTS, 6 SIDEBAR THEMES & 14 PRE-LOADED DISHES
+    // ------------------------------------------------------------
+    const STORAGE_KEY = 'ambill_restaurant_hotel_pos_v3';
+    try { localStorage.removeItem('ambill_restaurant_hotel_pos_v2'); } catch (e) {}
+    const CATEGORIES = ['All', 'Tiffin', 'Meals', 'Snacks', 'Beverages'];
+    const TABLE_LIST = Array.from({ length: 12 }, (_, i) => `T${i + 1}`);
+
+    const SIDEBAR_THEMES = [
+      { id: 'slate',    name: 'Slate Dark',     bg: '#0f172a', surface: '#1e293b', active: '#334155', accent: '#38bdf8', swatch: '#0f172a' },
+      { id: 'navy',     name: 'Deep Navy',      bg: '#172554', surface: '#1e3a8a', active: '#1d4ed8', accent: '#60a5fa', swatch: '#1e3a8a' },
+      { id: 'forest',   name: 'Forest Green',   bg: '#052e16', surface: '#14532d', active: '#166534', accent: '#4ade80', swatch: '#166534' },
+      { id: 'indigo',   name: 'Royal Indigo',   bg: '#1e1b4b', surface: '#312e81', active: '#4338ca', accent: '#a5b4fc', swatch: '#4338ca' },
+      { id: 'espresso', name: 'Espresso Brown', bg: '#291d18', surface: '#432d24', active: '#5c3d30', accent: '#fbbf24', swatch: '#432d24' },
+      { id: 'teal',     name: 'Charcoal Teal',  bg: '#112a2e', surface: '#164e63', active: '#0e7490', accent: '#2dd4bf', swatch: '#0e7490' }
+    ];
+
+    const HIGHLIGHT_COLORS = [
+      { id: 'orange',  name: 'Vivid Orange',    color: '#f97316', bg: 'rgba(249, 115, 22, 0.11)', ring: 'rgba(249, 115, 22, 0.34)', text: '#ffffff' },
+      { id: 'emerald', name: 'Emerald Green',   color: '#10b981', bg: 'rgba(16, 185, 129, 0.11)', ring: 'rgba(16, 185, 129, 0.34)', text: '#ffffff' },
+      { id: 'blue',    name: 'Royal Blue',      color: '#2563eb', bg: 'rgba(37, 99, 235, 0.10)',  ring: 'rgba(37, 99, 235, 0.32)',  text: '#ffffff' },
+      { id: 'crimson', name: 'Crimson Red',     color: '#e11d48', bg: 'rgba(225, 29, 72, 0.10)',  ring: 'rgba(225, 29, 72, 0.32)',  text: '#ffffff' },
+      { id: 'purple',  name: 'Electric Purple', color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.10)', ring: 'rgba(124, 58, 237, 0.32)', text: '#ffffff' },
+      { id: 'teal',    name: 'Bright Teal',     color: '#0d9488', bg: 'rgba(13, 148, 136, 0.11)', ring: 'rgba(13, 148, 136, 0.34)', text: '#ffffff' }
+    ];
+
+    const DEFAULT_MENU = [
+      { id: 'm001', code: '001', name: 'Idli (2 pcs)',       category: 'Tiffin',    price: 40,  available: true },
+      { id: 'm002', code: '002', name: 'Masala Dosa',        category: 'Tiffin',    price: 80,  available: true },
+      { id: 'm003', code: '003', name: 'Plain Dosa',         category: 'Tiffin',    price: 60,  available: true },
+      { id: 'm004', code: '004', name: 'Vada (2 pcs)',       category: 'Tiffin',    price: 40,  available: true },
+      { id: 'm005', code: '005', name: 'Poori Masala',       category: 'Tiffin',    price: 75,  available: true },
+      { id: 'm006', code: '006', name: 'Pongal',             category: 'Tiffin',    price: 65,  available: true },
+      { id: 'm007', code: '007', name: 'Parotta (2 pcs)',    category: 'Tiffin',    price: 50,  available: true },
+      { id: 'm008', code: '008', name: 'Chicken Biryani',    category: 'Meals',     price: 180, available: true },
+      { id: 'm009', code: '009', name: 'Veg Fried Rice',     category: 'Meals',     price: 120, available: true },
+      { id: 'm010', code: '010', name: 'Meals',              category: 'Meals',     price: 130, available: true },
+      { id: 'm011', code: '011', name: 'Filter Coffee',      category: 'Beverages', price: 30,  available: true },
+      { id: 'm012', code: '012', name: 'Tea',                category: 'Beverages', price: 25,  available: true },
+      { id: 'm013', code: '013', name: 'Fresh Lime Juice',   category: 'Beverages', price: 35,  available: true },
+      { id: 'm014', code: '014', name: 'Mineral Water',      category: 'Beverages', price: 20,  available: true }
+    ];
+
+    function createDefaultState() {
+      return {
+        settings: {
+          name: 'Annapoorna Grand Hotel',
+          address: 'No. 42, Anna Salai, Vellore, Tamil Nadu - 632001',
+          phone: '+91 98400 12345',
+          fssai: '12423000001234',
+          gstin: '33ABCDE1234F1Z5',
+          defaultGstRate: 5,
+          defaultParcelCharge: 0,
+          stickyParcelEnabled: false,
+          stickyParcelAmount: 0,
+          stickyGstEnabled: false,
+          footerNote: 'Thank You! Visit Again!',
+          sidebarTheme: 'slate',
+          highlightColor: 'orange',
+          printerType: 'thermal',
+          printerLabel: 'POS Thermal Printer (80mm)',
+          printerPaperSize: '80mm',
+          printerAutoPrint: true,
+          printerAutoCut: true,
+          printerCopies: 1
+        },
+        menu: JSON.parse(JSON.stringify(DEFAULT_MENU)),
+        tables: {},
+        bills: [],
+        nextBillSeq: 1,
+        nextKotSeq: 1
+      };
+    }
+
+    // ------------------------------------------------------------
+    // 2. RUNTIME APPLICATION STATE
+    // ------------------------------------------------------------
+    let appState = loadState();
+    let currentView = 'pos';
+    let activeCategory = 'All';
+    let autocompleteIndex = -1;
+    let autocompleteMatches = [];
+    let confirmCallback = null;
+    let printTimeoutId = null;
+    let lastPrintedReceiptHtml = '';
+    let lastPrintedTitle = '80mm Thermal Receipt';
+    let usbPrinterConn = { device: null, endpoint: null, label: '' };
+
+    let posOrder = {
+      orderType: 'Dine-In',
+      tableNo: 'T1',
+      customerName: '',
+      customerPhone: '',
+      items: [],
+      discount: 0,
+      parcelEnabled: false,
+      parcelCharge: 0,
+      gstEnabled: false,
+      paymentMode: 'Cash',
+      editingBillId: null,
+      editingBillNo: null
+    };
+
+    // ------------------------------------------------------------
+    // 3. LOCALSTORAGE PERSISTENCE
+    // ------------------------------------------------------------
+    function loadState() {
+      const defaults = createDefaultState();
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaults;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return defaults;
+        return {
+          ...defaults,
+          ...parsed,
+          settings: { ...defaults.settings, ...(parsed.settings || {}) },
+          menu: Array.isArray(parsed.menu) && parsed.menu.length ? parsed.menu : defaults.menu,
+          tables: parsed.tables && typeof parsed.tables === 'object' ? parsed.tables : {},
+          bills: Array.isArray(parsed.bills) ? parsed.bills : [],
+          nextBillSeq: Math.max(1, Number(parsed.nextBillSeq) || 1),
+          nextKotSeq: Math.max(1, Number(parsed.nextKotSeq) || 1)
+        };
+      } catch (err) {
+        console.warn('Could not load saved state, using defaults:', err);
+        return defaults;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (err) {
+        console.error('Could not save state to localStorage:', err);
+      }
+    }
+
+    // ------------------------------------------------------------
+    // 4. UTILITY HELPERS, TOASTS & CONFIRMATION MODAL
+    // ------------------------------------------------------------
+    function safeNum(val, fallback = 0) {
+      const n = Number(val);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function padCode(num, len = 3) {
+      return String(num ?? '').padStart(len, '0');
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatCurrency(val) {
+      const n = safeNum(val, 0);
+      return '₹' + Math.round(n).toLocaleString('en-IN');
+    }
+
+    function formatCurrencyFixed(val) {
+      const n = safeNum(val, 0);
+      return '₹' + n.toFixed(2);
+    }
+
+    function getLocalDateKey(isoStr) {
+      const d = isoStr ? new Date(isoStr) : new Date();
+      if (Number.isNaN(d.getTime())) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatDateTime(isoStr) {
+      const d = isoStr ? new Date(isoStr) : new Date();
+      if (Number.isNaN(d.getTime())) return '--';
+      return d.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    function getElapsedText(isoStr) {
+      if (!isoStr) return '0m';
+      const diffMs = Math.max(0, Date.now() - new Date(isoStr).getTime());
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 60) return `${mins}m`;
+      const hrs = Math.floor(mins / 60);
+      const rem = mins % 60;
+      return `${hrs}h ${rem}m`;
+    }
+
+    function getNextSequentialMenuCode() {
+      let maxNum = 0;
+      for (const item of appState.menu) {
+        const parsed = parseInt(String(item.code || '').replace(/\D/g, ''), 10);
+        if (Number.isFinite(parsed) && parsed > maxNum) maxNum = parsed;
+      }
+      return padCode(maxNum + 1, 3);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const styles = {
+        success: 'bg-emerald-600 text-white',
+        warning: 'bg-amber-500 text-slate-950',
+        error:   'bg-rose-600 text-white',
+        info:    'bg-slate-900 text-white'
+      };
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto max-w-sm rounded-xl px-4 py-2.5 text-xs font-bold shadow-lg transition-all duration-200 ${styles[type] || styles.info}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(6px)';
+        setTimeout(() => el.remove(), 220);
+      }, 3000);
+    }
+
+    function showConfirmModal(title, msg, onConfirm, okLabel = 'Confirm') {
+      document.getElementById('confirm-modal-title').textContent = title || 'Confirm Action';
+      document.getElementById('confirm-modal-msg').textContent = msg || '';
+      const okBtn = document.getElementById('confirm-modal-ok');
+      okBtn.textContent = okLabel || 'Confirm';
+      confirmCallback = typeof onConfirm === 'function' ? onConfirm : null;
+      okBtn.onclick = () => {
+        const cb = confirmCallback;
+        closeAllModals();
+        if (cb) cb();
+      };
+
+      document.getElementById('menu-item-modal').classList.add('hidden');
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      const backdrop = document.getElementById('modal-backdrop');
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+    }
+
+    function closeAllModals() {
+      confirmCallback = null;
+      const backdrop = document.getElementById('modal-backdrop');
+      if (backdrop) {
+        backdrop.classList.add('hidden');
+        backdrop.classList.remove('flex');
+      }
+      document.getElementById('menu-item-modal')?.classList.add('hidden');
+      document.getElementById('confirm-modal')?.classList.add('hidden');
+    }
+
+    // ------------------------------------------------------------
+    // 5. SIMPLE PRINTER SETTINGS (POS THERMAL & LASERJET) & PRINT ENGINE
+    // ------------------------------------------------------------
+    function isUsbConnected() {
+      return Boolean(usbPrinterConn.device && usbPrinterConn.endpoint !== null);
+    }
+
+    function isRunningInEmbeddedFrame() {
+      try {
+        return window.self !== window.top;
+      } catch (e) {
+        return true;
+      }
+    }
+
+    function isPermissionsPolicyBlocked(err) {
+      if (!err) return false;
+      const msg = String(err.message || '').toLowerCase();
+      return err.name === 'SecurityError' || msg.includes('permissions policy') || msg.includes('disallowed');
+    }
+
+    function selectSimplePrinterType(type) {
+      appState.settings.printerType = type === 'laser' ? 'laser' : 'thermal';
+      const paperSel = document.getElementById('pr-paper-size');
+      const nameInput = document.getElementById('pr-simple-name');
+
+      if (appState.settings.printerType === 'laser') {
+        if (paperSel) paperSel.value = 'A4';
+        if (nameInput && (!nameInput.value.trim() || nameInput.value.toLowerCase().includes('thermal') || nameInput.value.toLowerCase().includes('pos'))) {
+          nameInput.value = 'LaserJet Printer (A4)';
+        }
+      } else {
+        if (paperSel && paperSel.value === 'A4') paperSel.value = '80mm';
+        if (nameInput && (!nameInput.value.trim() || nameInput.value.toLowerCase().includes('laser'))) {
+          nameInput.value = 'POS Thermal Printer (80mm)';
+        }
+      }
+      updatePrinterStatusUI();
+    }
+
+    function updatePrinterStatusUI() {
+      const s = appState.settings;
+      const isLaser = s.printerType === 'laser';
+      const paper = s.printerPaperSize || (isLaser ? 'A4' : '80mm');
+      const label = (s.printerLabel || (isLaser ? 'LaserJet Printer' : 'POS Thermal Printer')).trim();
+      const usbOk = isUsbConnected();
+
+      const badge = document.getElementById('nav-printer-badge');
+      const pill = document.getElementById('printer-status-pill');
+      const desc = document.getElementById('printer-status-desc');
+      const icon = document.getElementById('printer-status-icon');
+      const card = document.getElementById('printer-status-card');
+
+      if (badge) {
+        if (usbOk) {
+          badge.textContent = 'USB Auto';
+          badge.className = 'rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white';
+        } else if (isLaser) {
+          badge.textContent = 'LaserJet';
+          badge.className = 'rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white';
+        } else {
+          badge.textContent = paper;
+          badge.className = 'rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white';
+        }
+      }
+
+      if (icon) icon.textContent = isLaser ? '🖨️' : '🧾';
+      if (pill && desc && card) {
+        pill.textContent = usbOk ? 'USB Connected • Silent Auto-Print' : `${isLaser ? 'LaserJet' : 'POS Thermal'} • ${paper}`;
+        pill.className = 'rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800';
+        desc.textContent = `Active: ${usbOk ? usbPrinterConn.label : label} (${s.printerAutoPrint ? 'Auto-Print ON' : 'Preview Modal ON'})`;
+        card.className = 'flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50/30 p-4 shadow-2xs';
+      }
+
+      const thermalBtn = document.getElementById('btn-pr-type-thermal');
+      const laserBtn = document.getElementById('btn-pr-type-laser');
+      if (thermalBtn) {
+        thermalBtn.className = `flex items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${
+          !isLaser ? 'border-emerald-500 bg-emerald-50/60 shadow-xs' : 'border-slate-200 bg-white hover:bg-slate-50'
+        }`;
+      }
+      if (laserBtn) {
+        laserBtn.className = `flex items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${
+          isLaser ? 'border-sky-500 bg-sky-50/60 shadow-xs' : 'border-slate-200 bg-white hover:bg-slate-50'
+        }`;
+      }
+
+      const usbBtn = document.getElementById('btn-connect-usb-simple');
+      const discBtn = document.getElementById('btn-disconnect-usb-simple');
+      const cutWrap = document.getElementById('pr-autocut-wrap');
+      if (usbBtn) usbBtn.classList.toggle('hidden', isLaser);
+      if (discBtn) discBtn.classList.toggle('hidden', !usbOk || isLaser);
+      if (cutWrap) cutWrap.classList.toggle('hidden', isLaser);
+    }
+
+    function renderPrinterSettingsView() {
+      const s = appState.settings;
+      const nameEl = document.getElementById('pr-simple-name');
+      const paperEl = document.getElementById('pr-paper-size');
+      const copiesEl = document.getElementById('pr-copies');
+      const autoEl = document.getElementById('pr-auto-print');
+      const cutEl = document.getElementById('pr-autocut');
+
+      if (nameEl) nameEl.value = s.printerLabel || (s.printerType === 'laser' ? 'LaserJet Printer (A4)' : 'POS Thermal Printer (80mm)');
+      if (paperEl) paperEl.value = s.printerPaperSize || (s.printerType === 'laser' ? 'A4' : '80mm');
+      if (copiesEl) copiesEl.value = String(s.printerCopies || 1);
+      if (autoEl) autoEl.checked = s.printerAutoPrint !== false;
+      if (cutEl) cutEl.checked = s.printerAutoCut !== false;
+
+      const notice = document.getElementById('printer-iframe-notice');
+      if (notice) notice.classList.toggle('hidden', !isRunningInEmbeddedFrame());
+
+      updatePrinterStatusUI();
+    }
+
+    function saveSimplePrinterSettings() {
+      const nameVal = (document.getElementById('pr-simple-name')?.value || '').trim();
+      const paperVal = document.getElementById('pr-paper-size')?.value || '80mm';
+      const copiesVal = safeNum(document.getElementById('pr-copies')?.value, 1);
+      const autoPrintVal = Boolean(document.getElementById('pr-auto-print')?.checked);
+      const autoCutVal = Boolean(document.getElementById('pr-autocut')?.checked);
+
+      appState.settings.printerPaperSize = paperVal;
+      appState.settings.printerType = paperVal === 'A4' ? 'laser' : (appState.settings.printerType || 'thermal');
+      appState.settings.printerLabel = nameVal || (appState.settings.printerType === 'laser' ? 'LaserJet Printer (A4)' : `POS Thermal Printer (${paperVal})`);
+      appState.settings.printerCopies = copiesVal;
+      appState.settings.printerAutoPrint = autoPrintVal;
+      appState.settings.printerAutoCut = autoCutVal;
+
+      saveState();
+      updatePrinterStatusUI();
+      showToast(`Saved! Active Printer: ${appState.settings.printerLabel} (${paperVal})`, 'success');
+    }
+
+    function downloadLocalPosHtml() {
+      try {
+        const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'restaurant_hotel_pos_80mm.html';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Downloaded restaurant_hotel_pos_80mm.html for your PC!', 'success');
+      } catch (err) {
+        showToast('Could not download file.', 'warning');
+      }
+    }
+
+    function openPcPrinterSelector() {
+      const paperVal = document.getElementById('pr-paper-size')?.value || appState.settings.printerPaperSize || '80mm';
+      const label = (document.getElementById('pr-simple-name')?.value || appState.settings.printerLabel || 'PC Printer').trim();
+      appState.settings.printerPaperSize = paperVal;
+      appState.settings.printerLabel = label;
+
+      const testHtml = `<div class="thermal-receipt-box" style="text-align:center;">
+        <div style="font-size:15px;font-weight:800;">${escapeHtml(appState.settings.name)}</div>
+        <div class="thermal-divider-solid"></div>
+        <div style="font-weight:700;">PRINTER TEST PAGE</div>
+        <div style="margin-top:4px;font-size:11px;">Printer: ${escapeHtml(label)}</div>
+        <div style="margin-top:2px;font-size:11px;">Paper Size: ${escapeHtml(paperVal)}</div>
+        <div style="margin-top:2px;font-size:11px;">${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
+        <div class="thermal-divider-solid"></div>
+        <div style="font-size:11px;">Select your POS Thermal or LaserJet in the Destination box.</div>
+      </div>`;
+      lastPrintedReceiptHtml = testHtml;
+      lastPrintedTitle = `Print Test — ${label}`;
+      triggerPrintNow();
+    }
+
+    async function testSimplePrinter() {
+      if (appState.settings.printerType !== 'laser' && isUsbConnected()) {
+        try {
+          const bytes = buildEscPosPayload({ type: 'test' });
+          await usbPrinterConn.device.transferOut(usbPrinterConn.endpoint, bytes);
+          showToast('🖨️ Test receipt printed silently on USB POS printer!', 'success');
+          return;
+        } catch (err) {
+          showToast('USB test failed, opening PC printer dialog...', 'warning');
+        }
+      }
+      openPcPrinterSelector();
+    }
+
+    async function connectSimpleUsbPrinter() {
+      if (!('usb' in navigator)) {
+        showToast('Opening PC Printer Selector instead.', 'info');
+        openPcPrinterSelector();
+        return;
+      }
+      try {
+        const device = await navigator.usb.requestDevice({ filters: [] });
+        await device.open();
+        if (device.configuration === null) await device.selectConfiguration(1);
+
+        let outEndpoint = null;
+        let ifaceNum = 0;
+        for (const iface of device.configuration.interfaces) {
+          for (const alt of iface.alternates) {
+            const ep = alt.endpoints.find(e => e.direction === 'out');
+            if (ep) {
+              outEndpoint = ep.endpointNumber;
+              ifaceNum = iface.interfaceNumber;
+              break;
+            }
+          }
+          if (outEndpoint !== null) break;
+        }
+        if (outEndpoint === null) throw new Error('No printable USB endpoint found.');
+        await device.claimInterface(ifaceNum);
+
+        usbPrinterConn = {
+          device,
+          endpoint: outEndpoint,
+          label: device.productName || 'USB POS Thermal Printer'
+        };
+        appState.settings.printerType = 'thermal';
+        appState.settings.printerLabel = usbPrinterConn.label;
+        appState.settings.printerAutoPrint = true;
+        const nameEl = document.getElementById('pr-simple-name');
+        if (nameEl) nameEl.value = usbPrinterConn.label;
+        saveState();
+        updatePrinterStatusUI();
+        showToast(`Connected "${usbPrinterConn.label}"! Silent auto-print is ON.`, 'success');
+      } catch (err) {
+        if (err && err.name === 'NotFoundError') return;
+        if (isPermissionsPolicyBlocked(err)) {
+          document.getElementById('printer-iframe-notice')?.classList.remove('hidden');
+          showToast('Online preview blocks direct USB. Use "Select Connected PC Printer" or Download POS (.html) for PC.', 'warning');
+          return;
+        }
+        showToast('Could not connect USB printer: ' + (err?.message || 'Check cable.'), 'error');
+      }
+    }
+
+    async function disconnectSimpleUsbPrinter() {
+      try {
+        if (usbPrinterConn.device) await usbPrinterConn.device.close();
+      } catch (e) {}
+      usbPrinterConn = { device: null, endpoint: null, label: '' };
+      updatePrinterStatusUI();
+      showToast('USB printer disconnected.', 'info');
+    }
+
+    async function autoReconnectDirectPrinter() {
+      if (appState.settings.printerType === 'laser' || isRunningInEmbeddedFrame() || !('usb' in navigator)) return;
+      try {
+        const devices = await navigator.usb.getDevices();
+        if (devices && devices.length > 0 && !isUsbConnected()) {
+          const device = devices[0];
+          await device.open();
+          if (device.configuration === null) await device.selectConfiguration(1);
+          for (const iface of device.configuration.interfaces) {
+            for (const alt of iface.alternates) {
+              const ep = alt.endpoints.find(e => e.direction === 'out');
+              if (ep) {
+                await device.claimInterface(iface.interfaceNumber);
+                usbPrinterConn = {
+                  device,
+                  endpoint: ep.endpointNumber,
+                  label: device.productName || appState.settings.printerLabel || 'USB POS Printer'
+                };
+                updatePrinterStatusUI();
+                return;
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    function escPosLine(left, right, width) {
+      const l = String(left || '');
+      const r = String(right || '');
+      const space = Math.max(1, width - l.length - r.length);
+      return l + ' '.repeat(space) + r + '\n';
+    }
+
+    function buildEscPosPayload(printMeta) {
+      const s = appState.settings;
+      const w = s.printerPaperSize === '58mm' ? 32 : 48;
+      const hr = '-'.repeat(w) + '\n';
+      const eq = '='.repeat(w) + '\n';
+      const chunks = [];
+      const encoder = new TextEncoder();
+
+      const pushBytes = (...bytes) => chunks.push(new Uint8Array(bytes));
+      const pushText = (txt) => chunks.push(encoder.encode(txt));
+
+      pushBytes(0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01);
+
+      if (printMeta.type === 'test') {
+        pushText((s.name || 'RESTAURANT POS').toUpperCase() + '\n');
+        pushBytes(0x1B, 0x45, 0x00);
+        pushText('*** PRINTER TEST OK ***\n');
+        pushText(hr);
+        pushBytes(0x1B, 0x61, 0x00);
+        pushText(`Printer : ${s.printerLabel || 'POS Thermal'}\n`);
+        pushText(`Paper   : ${s.printerPaperSize || '80mm'}\n`);
+        pushText(`Time    : ${formatDateTime(new Date().toISOString())}\n`);
+        pushText(eq);
+      } else if (printMeta.type === 'kot') {
+        const kot = printMeta.data;
+        pushText('*** KITCHEN ORDER (KOT) ***\n');
+        pushText((s.name || '').toUpperCase() + '\n');
+        pushBytes(0x1B, 0x45, 0x00, 0x1B, 0x61, 0x00);
+        pushText(eq);
+        pushText(escPosLine(`KOT: ${kot.kotNo}`, `${kot.orderType}${kot.tableNo ? ' ' + kot.tableNo : ''}`, w));
+        pushText(`Date: ${formatDateTime(kot.createdAt)}\n`);
+        if (kot.customerName) pushText(`Cust: ${kot.customerName}\n`);
+        pushText(hr);
+        pushBytes(0x1B, 0x45, 0x01);
+        pushText(escPosLine('ITEM', 'QTY', w));
+        pushText(hr);
+        let totalQty = 0;
+        (kot.items || []).forEach(it => {
+          const q = safeNum(it.qty, 1);
+          totalQty += q;
+          pushText(escPosLine(String(it.name).slice(0, w - 6), `x${q}`, w));
+        });
+        pushBytes(0x1B, 0x45, 0x00);
+        pushText(hr);
+        pushBytes(0x1B, 0x45, 0x01);
+        pushText(escPosLine(`ITEMS: ${(kot.items || []).length}`, `TOTAL QTY: ${totalQty}`, w));
+        pushBytes(0x1B, 0x45, 0x00);
+        pushText(eq);
+      } else if (printMeta.type === 'bill') {
+        const bill = printMeta.data;
+        pushText((s.name || 'RESTAURANT POS').toUpperCase() + '\n');
+        pushBytes(0x1B, 0x45, 0x00);
+        if (s.address) pushText(s.address + '\n');
+        if (s.phone) pushText('Ph: ' + s.phone + '\n');
+        if (s.fssai) pushText('FSSAI: ' + s.fssai + '\n');
+        if (bill.gstApplied && s.gstin) pushText('GSTIN: ' + s.gstin + '\n');
+        pushText(eq);
+        pushBytes(0x1B, 0x45, 0x01);
+        pushText((bill.gstApplied ? 'TAX INVOICE' : 'CASH BILL') + '\n');
+        pushBytes(0x1B, 0x45, 0x00, 0x1B, 0x61, 0x00);
+        pushText(hr);
+        pushText(escPosLine(`Bill: ${bill.billNo}`, `Pay: ${bill.paymentMode || 'Cash'}`, w));
+        pushText(`Date: ${formatDateTime(bill.createdAt)}\n`);
+        pushText(`Type: ${bill.orderType || 'Dine-In'}${bill.tableNo ? ' (' + bill.tableNo + ')' : ''}\n`);
+        if (bill.customerName) pushText(`Cust: ${bill.customerName}\n`);
+        pushText(eq);
+        pushText(escPosLine('Item', 'Qty   Rate     Amt', w));
+        pushText(hr);
+        (bill.items || []).forEach(it => {
+          const amt = (safeNum(it.price, 0) * safeNum(it.qty, 0)).toFixed(2);
+          const rightPart = `${String(safeNum(it.qty, 0)).padStart(3)} ${String(safeNum(it.price, 0).toFixed(0)).padStart(6)} ${String(amt).padStart(7)}`;
+          const maxName = Math.max(8, w - rightPart.length - 1);
+          pushText(escPosLine(String(it.name).slice(0, maxName), rightPart, w));
+        });
+        pushText(hr);
+        pushText(escPosLine('Subtotal', safeNum(bill.subtotal, 0).toFixed(2), w));
+        if (safeNum(bill.parcelCharge, 0) > 0) pushText(escPosLine('Parcel Charge', safeNum(bill.parcelCharge, 0).toFixed(2), w));
+        if (bill.gstApplied) {
+          const halfRate = (safeNum(bill.gstRate, 5) / 2).toFixed(1);
+          const halfGst = (safeNum(bill.gstAmount, 0) / 2).toFixed(2);
+          pushText(escPosLine(`CGST (${halfRate}%)`, halfGst, w));
+          pushText(escPosLine(`SGST (${halfRate}%)`, halfGst, w));
+        }
+        if (Math.abs(safeNum(bill.roundOff, 0)) >= 0.005) {
+          const ro = safeNum(bill.roundOff, 0);
+          pushText(escPosLine('Round Off', (ro >= 0 ? '+' : '') + ro.toFixed(2), w));
+        }
+        pushText(eq);
+        pushBytes(0x1B, 0x45, 0x01, 0x1D, 0x21, 0x01);
+        pushText(escPosLine('GRAND TOTAL', `Rs.${safeNum(bill.grandTotal, 0).toFixed(2)}`, w));
+        pushBytes(0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00);
+        pushText(eq);
+        pushBytes(0x1B, 0x61, 0x01);
+        pushText((s.footerNote || 'Thank You! Visit Again!') + '\n');
+      } else if (printMeta.type === 'report') {
+        const { bills, fromDate, toDate } = printMeta.data;
+        let total = 0, cash = 0, upi = 0, card = 0;
+        (bills || []).forEach(b => {
+          const gt = safeNum(b.grandTotal, 0);
+          total += gt;
+          if (b.paymentMode === 'UPI') upi += gt;
+          else if (b.paymentMode === 'Card') card += gt;
+          else cash += gt;
+        });
+        pushText((s.name || 'RESTAURANT POS').toUpperCase() + '\n');
+        pushText('SALES SUMMARY REPORT\n');
+        pushBytes(0x1B, 0x45, 0x00, 0x1B, 0x61, 0x00);
+        pushText(`Range: ${fromDate || 'All'} to ${toDate || 'Today'}\n`);
+        pushText(eq);
+        pushText(escPosLine('Total Bills', String((bills || []).length), w));
+        pushText(escPosLine('Cash Sales', `Rs.${cash.toFixed(2)}`, w));
+        pushText(escPosLine('UPI Sales', `Rs.${upi.toFixed(2)}`, w));
+        pushText(escPosLine('Card Sales', `Rs.${card.toFixed(2)}`, w));
+        pushText(eq);
+        pushBytes(0x1B, 0x45, 0x01);
+        pushText(escPosLine('NET SALES', `Rs.${total.toFixed(2)}`, w));
+        pushBytes(0x1B, 0x45, 0x00);
+        pushText(eq);
+      }
+
+      pushText('\n\n\n\n');
+      if (s.printerAutoCut !== false) pushBytes(0x1D, 0x56, 0x42, 0x00);
+
+      const totalLen = chunks.reduce((sum, arr) => sum + arr.length, 0);
+      const merged = new Uint8Array(totalLen);
+      let offset = 0;
+      for (const arr of chunks) {
+        merged.set(arr, offset);
+        offset += arr.length;
+      }
+      return merged;
+    }
+
+    function buildStandaloneThermalDoc(receiptHtml, title) {
+      const paper = appState.settings.printerPaperSize || '80mm';
+      const isA4 = paper === 'A4';
+      const is58 = paper === '58mm';
+      const pageSize = isA4 ? 'A4 portrait' : (is58 ? '58mm auto' : '80mm auto');
+      const bodyWidth = isA4 ? '100%' : (is58 ? '58mm' : '80mm');
+      const boxStyles = isA4
+        ? 'width:100%;max-width:140mm;margin:12mm auto;padding:10mm;border:1px solid #cbd5e1;font-size:13px;'
+        : `width:${is58 ? '52mm' : '74mm'};max-width:${is58 ? '54mm' : '76mm'};margin:0 auto;padding:3mm 1mm;font-size:${is58 ? '10.5px' : '11.5px'};`;
+
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(title || 'POS Receipt')}</title>
+  <style>
+    @page { size: ${pageSize}; margin: ${isA4 ? '10mm' : '0'}; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: ${bodyWidth};
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #000000;
+      font-family: 'Courier New', Courier, monospace;
+      line-height: 1.38;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .thermal-receipt-box {
+      ${boxStyles}
+      background: #ffffff;
+      color: #000000;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .thermal-divider-dashed { border-top: 1px dashed #000000; margin: 6px 0; }
+    .thermal-divider-solid { border-top: 1.5px solid #000000; margin: 6px 0; }
+    .thermal-table { width: 100%; border-collapse: collapse; }
+    .thermal-table th, .thermal-table td { padding: 2px 1px; vertical-align: top; color: #000000; }
+  </style>
+</head>
+<body>${receiptHtml}</body>
+</html>`;
+    }
+
+    function printHtmlViaIframe(receiptHtml, title) {
+      try {
+        const iframe = document.getElementById('thermal-print-frame');
+        const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+        if (!doc) {
+          window.print();
+          return;
+        }
+        doc.open();
+        doc.write(buildStandaloneThermalDoc(receiptHtml, title));
+        doc.close();
+
+        if (printTimeoutId) clearTimeout(printTimeoutId);
+        printTimeoutId = setTimeout(() => {
+          try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          } catch (e) {
+            window.print();
+          }
+        }, 240);
+      } catch (err) {
+        window.print();
+      }
+    }
+
+    async function openThermalPrintPipeline(title, receiptHtml, printMeta = null) {
+      try {
+        lastPrintedReceiptHtml = receiptHtml;
+        lastPrintedTitle = title || 'Receipt';
+
+        // 1. Direct USB POS Thermal Printer (Zero Dialog Silent Print)
+        if (appState.settings.printerType !== 'laser' && printMeta && isUsbConnected()) {
+          const copies = printMeta.type === 'bill' ? Math.max(1, safeNum(appState.settings.printerCopies, 1)) : 1;
+          const bytes = buildEscPosPayload(printMeta);
+          for (let i = 0; i < copies; i++) {
+            await usbPrinterConn.device.transferOut(usbPrinterConn.endpoint, bytes);
+          }
+          showToast('🖨️ Printed silently on POS Thermal Printer!', 'success');
+          return;
+        }
+
+        const printArea = document.getElementById('print-area');
+        if (printArea) printArea.innerHTML = receiptHtml;
+
+        // 2. Auto-Print ON -> Skip Preview Modal & Print Directly
+        if (appState.settings.printerAutoPrint) {
+          triggerPrintNow();
+          return;
+        }
+
+        // 3. Preview Modal Mode
+        const previewModal = document.getElementById('print-preview-modal');
+        const previewContent = document.getElementById('print-preview-content');
+        const previewTitle = document.getElementById('print-preview-title');
+
+        previewContent.innerHTML = receiptHtml;
+        previewTitle.textContent = lastPrintedTitle;
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
+      } catch (err) {
+        console.error('Print error:', err);
+        showToast('Print error: ' + (err.message || 'Check printer connection.'), 'error');
+      }
+    }
+
+    function triggerPrintNow() {
+      if (!lastPrintedReceiptHtml) {
+        showToast('Nothing to print yet.', 'warning');
+        return;
+      }
+      try {
+        const isA4 = appState.settings.printerPaperSize === 'A4';
+        const win = window.open('', '_blank', isA4 ? 'width=760,height=850,scrollbars=yes' : 'width=380,height=650,scrollbars=yes');
+        if (win) {
+          win.document.open();
+          win.document.write(buildStandaloneThermalDoc(lastPrintedReceiptHtml, lastPrintedTitle));
+          win.document.close();
+          win.focus();
+          setTimeout(() => {
+            try {
+              win.focus();
+              win.print();
+            } catch (e) {}
+          }, 240);
+          return;
+        }
+      } catch (e) {}
+      printHtmlViaIframe(lastPrintedReceiptHtml, lastPrintedTitle);
+    }
+
+    function closePrintPreviewModal() {
+      const previewModal = document.getElementById('print-preview-modal');
+      if (previewModal) {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+      }
+      if (currentView === 'pos') {
+        setTimeout(() => document.getElementById('fast-item-input')?.focus(), 60);
+      }
+    }
+
+    // ------------------------------------------------------------
+    // 6. 80mm THERMAL RECEIPT HTML BUILDERS (KOT, BILL, REPORT)
+    // ------------------------------------------------------------
+    function buildKotReceiptHtml(kot) {
+      const s = appState.settings;
+      const rowsHtml = kot.items.map(it => `
+        <tr>
+          <td style="padding:3px 0;font-weight:700;font-size:13px;">${escapeHtml(it.name)}</td>
+          <td style="padding:3px 0;text-align:right;font-weight:800;font-size:15px;width:44px;">x${safeNum(it.qty, 1)}</td>
+        </tr>
+      `).join('');
+
+      const totalQty = kot.items.reduce((sum, it) => sum + safeNum(it.qty, 0), 0);
+
+      return `
+        <div class="thermal-receipt-box">
+          <div style="text-align:center;">
+            <div style="font-size:15px;font-weight:800;letter-spacing:0.5px;">*** KITCHEN ORDER (KOT) ***</div>
+            <div style="font-size:12px;font-weight:700;margin-top:2px;">${escapeHtml(s.name)}</div>
+          </div>
+          <div class="thermal-divider-solid"></div>
+          <div style="display:flex;justify-content:space-between;font-weight:700;">
+            <span>KOT: ${escapeHtml(kot.kotNo)}</span>
+            <span>${escapeHtml(kot.orderType)}${kot.tableNo ? ' • ' + escapeHtml(kot.tableNo) : ''}</span>
+          </div>
+          <div style="margin-top:2px;">Date: ${escapeHtml(formatDateTime(kot.createdAt))}</div>
+          ${kot.customerName ? `<div style="margin-top:2px;">Cust: ${escapeHtml(kot.customerName)}</div>` : ''}
+          <div class="thermal-divider-dashed"></div>
+          <table class="thermal-table">
+            <thead>
+              <tr style="border-bottom:1px dashed #000;">
+                <th style="text-align:left;">Item</th>
+                <th style="text-align:right;">Qty</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="thermal-divider-dashed"></div>
+          <div style="display:flex;justify-content:space-between;font-weight:800;font-size:13px;">
+            <span>TOTAL ITEMS: ${kot.items.length}</span>
+            <span>TOTAL QTY: ${totalQty}</span>
+          </div>
+          <div class="thermal-divider-solid"></div>
+          <div style="text-align:center;font-size:10.5px;">--- KITCHEN COPY (NO PRICE) ---</div>
+        </div>
+      `;
+    }
+
+    function buildBillReceiptHtml(bill) {
+      const s = appState.settings;
+      const itemsHtml = (bill.items || []).map(it => {
+        const lineAmt = safeNum(it.price, 0) * safeNum(it.qty, 0);
+        return `
+          <tr>
+            <td style="text-align:left;padding-right:4px;">${escapeHtml(it.name)}</td>
+            <td style="text-align:right;width:28px;">${safeNum(it.qty, 0)}</td>
+            <td style="text-align:right;width:42px;">${safeNum(it.price, 0).toFixed(0)}</td>
+            <td style="text-align:right;width:54px;font-weight:700;">${lineAmt.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const parcelAmt = safeNum(bill.parcelCharge, 0);
+      const gstApplied = Boolean(bill.gstApplied);
+      const gstRate = safeNum(bill.gstRate, safeNum(s.defaultGstRate, 5));
+      const halfRate = (gstRate / 2).toFixed(gstRate % 2 === 0 ? 0 : 1);
+      const halfGst = safeNum(bill.gstAmount, 0) / 2;
+      const roundOff = safeNum(bill.roundOff, 0);
+
+      return `
+        <div class="thermal-receipt-box">
+          <div style="text-align:center;">
+            <div style="font-size:15px;font-weight:800;text-transform:uppercase;">${escapeHtml(s.name)}</div>
+            ${s.address ? `<div style="font-size:10.5px;margin-top:2px;">${escapeHtml(s.address)}</div>` : ''}
+            ${s.phone ? `<div style="font-size:10.5px;">Ph: ${escapeHtml(s.phone)}</div>` : ''}
+            ${s.fssai ? `<div style="font-size:10.5px;">FSSAI: ${escapeHtml(s.fssai)}</div>` : ''}
+            ${gstApplied && s.gstin ? `<div style="font-size:10.5px;font-weight:700;">GSTIN: ${escapeHtml(s.gstin)}</div>` : ''}
+          </div>
+          <div class="thermal-divider-solid"></div>
+          <div style="text-align:center;font-weight:800;letter-spacing:0.5px;">${gstApplied ? 'TAX INVOICE' : 'CASH BILL'}</div>
+          <div class="thermal-divider-dashed"></div>
+          <div style="display:flex;justify-content:space-between;">
+            <span><strong>Bill:</strong> ${escapeHtml(bill.billNo)}</span>
+            <span><strong>Pay:</strong> ${escapeHtml(bill.paymentMode || 'Cash')}</span>
+          </div>
+          <div style="margin-top:2px;"><strong>Date:</strong> ${escapeHtml(formatDateTime(bill.createdAt))}</div>
+          <div style="margin-top:2px;"><strong>Type:</strong> ${escapeHtml(bill.orderType || 'Dine-In')}${bill.tableNo ? ' (' + escapeHtml(bill.tableNo) + ')' : ''}</div>
+          ${bill.customerName ? `<div style="margin-top:2px;"><strong>Cust:</strong> ${escapeHtml(bill.customerName)}${bill.customerPhone ? ' • ' + escapeHtml(bill.customerPhone) : ''}</div>` : (bill.customerPhone ? `<div style="margin-top:2px;"><strong>Ph:</strong> ${escapeHtml(bill.customerPhone)}</div>` : '')}
+          <div class="thermal-divider-solid"></div>
+          <table class="thermal-table">
+            <thead>
+              <tr style="border-bottom:1px dashed #000;">
+                <th style="text-align:left;">Item</th>
+                <th style="text-align:right;">Qty</th>
+                <th style="text-align:right;">Rate</th>
+                <th style="text-align:right;">Amt</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <div class="thermal-divider-dashed"></div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Subtotal</span>
+            <span>${safeNum(bill.subtotal, 0).toFixed(2)}</span>
+          </div>
+          ${parcelAmt > 0 ? `
+          <div style="display:flex;justify-content:space-between;">
+            <span>Parcel Charge</span>
+            <span>${parcelAmt.toFixed(2)}</span>
+          </div>` : ''}
+          ${gstApplied ? `
+          <div style="display:flex;justify-content:space-between;">
+            <span>CGST (${halfRate}%)</span>
+            <span>${halfGst.toFixed(2)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>SGST (${halfRate}%)</span>
+            <span>${halfGst.toFixed(2)}</span>
+          </div>` : ''}
+          ${Math.abs(roundOff) >= 0.005 ? `
+          <div style="display:flex;justify-content:space-between;">
+            <span>Round Off</span>
+            <span>${roundOff >= 0 ? '+' : ''}${roundOff.toFixed(2)}</span>
+          </div>` : ''}
+          <div class="thermal-divider-solid"></div>
+          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;">
+            <span>GRAND TOTAL</span>
+            <span>Rs.${safeNum(bill.grandTotal, 0).toFixed(2)}</span>
+          </div>
+          <div class="thermal-divider-solid"></div>
+          <div style="text-align:center;margin-top:4px;font-weight:700;">${escapeHtml(s.footerNote || 'Thank You! Visit Again!')}</div>
+          <div style="text-align:center;font-size:10px;margin-top:2px;">*** COMPUTER GENERATED RECEIPT ***</div>
+        </div>
+      `;
+    }
+
+    function buildSalesReportReceiptHtml(bills, fromDate, toDate) {
+      const s = appState.settings;
+      let totalSales = 0, cashTotal = 0, upiTotal = 0, cardTotal = 0, gstTotal = 0, parcelTotal = 0;
+
+      const rowsHtml = bills.map(b => {
+        const gt = safeNum(b.grandTotal, 0);
+        totalSales += gt;
+        gstTotal += safeNum(b.gstAmount, 0);
+        parcelTotal += safeNum(b.parcelCharge, 0);
+        if (b.paymentMode === 'UPI') upiTotal += gt;
+        else if (b.paymentMode === 'Card') cardTotal += gt;
+        else cashTotal += gt;
+
+        return `
+          <tr>
+            <td style="text-align:left;">${escapeHtml(b.billNo)}</td>
+            <td style="text-align:left;">${escapeHtml(b.paymentMode || 'Cash')}</td>
+            <td style="text-align:right;font-weight:700;">${gt.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const rangeText = fromDate || toDate
+        ? `${fromDate || 'Start'} to ${toDate || 'Today'}`
+        : 'All Filtered Bills';
+
+      return `
+        <div class="thermal-receipt-box">
+          <div style="text-align:center;">
+            <div style="font-size:14px;font-weight:800;text-transform:uppercase;">${escapeHtml(s.name)}</div>
+            <div style="font-size:12px;font-weight:700;margin-top:2px;">SALES SUMMARY REPORT</div>
+            <div style="font-size:10.5px;margin-top:2px;">Range: ${escapeHtml(rangeText)}</div>
+            <div style="font-size:10px;">Printed: ${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
+          </div>
+          <div class="thermal-divider-solid"></div>
+          <div style="display:flex;justify-content:space-between;font-weight:700;">
+            <span>Total Bills:</span>
+            <span>${bills.length}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Cash Sales:</span>
+            <span>Rs.${cashTotal.toFixed(2)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>UPI Sales:</span>
+            <span>Rs.${upiTotal.toFixed(2)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Card Sales:</span>
+            <span>Rs.${cardTotal.toFixed(2)}</span>
+          </div>
+          ${parcelTotal > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Total Parcel:</span><span>Rs.${parcelTotal.toFixed(2)}</span></div>` : ''}
+          ${gstTotal > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Total GST:</span><span>Rs.${gstTotal.toFixed(2)}</span></div>` : ''}
+          <div class="thermal-divider-solid"></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;">
+            <span>NET SALES</span>
+            <span>Rs.${totalSales.toFixed(2)}</span>
+          </div>
+          <div class="thermal-divider-dashed"></div>
+          <table class="thermal-table">
+            <thead>
+              <tr style="border-bottom:1px dashed #000;">
+                <th style="text-align:left;">Bill No</th>
+                <th style="text-align:left;">Mode</th>
+                <th style="text-align:right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml || '<tr><td colspan="3" style="text-align:center;padding:6px 0;">No bills in range</td></tr>'}</tbody>
+          </table>
+          <div class="thermal-divider-solid"></div>
+          <div style="text-align:center;font-size:10px;">--- END OF SALES REPORT ---</div>
+        </div>
+      `;
+    }
+
+    // ------------------------------------------------------------
+    // 7. POS ORDER, STICKY PARCEL/GST & CART MANAGEMENT
+    // ------------------------------------------------------------
+    function syncStickyTogglesToPos() {
+      const s = appState.settings;
+      posOrder.parcelEnabled = Boolean(s.stickyParcelEnabled);
+      posOrder.parcelCharge = safeNum(s.stickyParcelAmount, 0);
+      posOrder.gstEnabled = Boolean(s.stickyGstEnabled);
+
+      const parcelToggleEl = document.getElementById('bill-parcel-toggle');
+      const parcelInputEl = document.getElementById('bill-parcel-input');
+      const gstToggleEl = document.getElementById('bill-gst-toggle');
+
+      if (parcelToggleEl) parcelToggleEl.checked = posOrder.parcelEnabled;
+      if (parcelInputEl) {
+        parcelInputEl.value = posOrder.parcelCharge;
+        parcelInputEl.disabled = !posOrder.parcelEnabled;
+      }
+      if (gstToggleEl) gstToggleEl.checked = posOrder.gstEnabled;
+    }
+
+    function handleParcelToggleChange() {
+      const checked = Boolean(document.getElementById('bill-parcel-toggle')?.checked);
+      posOrder.parcelEnabled = checked;
+      appState.settings.stickyParcelEnabled = checked;
+
+      const parcelInputEl = document.getElementById('bill-parcel-input');
+      if (parcelInputEl) {
+        parcelInputEl.disabled = !checked;
+        if (checked) {
+          parcelInputEl.focus();
+          parcelInputEl.select();
+        }
+      }
+      saveState();
+      renderCart();
+    }
+
+    function handleParcelAmountInput() {
+      const val = Math.max(0, safeNum(document.getElementById('bill-parcel-input')?.value, 0));
+      posOrder.parcelCharge = val;
+      appState.settings.stickyParcelAmount = val;
+      saveState();
+      renderCart();
+    }
+
+    function handleGstToggleChange() {
+      const checked = Boolean(document.getElementById('bill-gst-toggle')?.checked);
+      posOrder.gstEnabled = checked;
+      appState.settings.stickyGstEnabled = checked;
+      saveState();
+      renderCart();
+    }
+
+    function calculateTotals() {
+      const subtotal = posOrder.items.reduce((sum, it) => sum + safeNum(it.price, 0) * safeNum(it.qty, 0), 0);
+      const appliedParcel = posOrder.parcelEnabled ? Math.max(0, safeNum(posOrder.parcelCharge, 0)) : 0;
+      const taxable = subtotal + appliedParcel;
+      const gstRate = safeNum(appState.settings.defaultGstRate, 5);
+      const gstAmount = posOrder.gstEnabled ? (taxable * gstRate) / 100 : 0;
+      const rawTotal = taxable + gstAmount;
+      const grandTotal = Math.round(rawTotal);
+      const roundOff = grandTotal - rawTotal;
+
+      return {
+        subtotal,
+        parcelCharge: appliedParcel,
+        gstApplied: Boolean(posOrder.gstEnabled),
+        gstRate,
+        gstAmount,
+        roundOff,
+        grandTotal
+      };
+    }
+
+    function addItemToCart(menuItem, qty = 1) {
+      if (!menuItem) return;
+      if (!menuItem.available) {
+        showToast(`${menuItem.name} is currently Sold Out.`, 'warning');
+        return;
+      }
+      const addQty = Math.max(1, Math.floor(safeNum(qty, 1)));
+      const existing = posOrder.items.find(it => it.id === menuItem.id);
+      if (existing) {
+        existing.qty = safeNum(existing.qty, 0) + addQty;
+      } else {
+        posOrder.items.push({
+          id: menuItem.id,
+          code: menuItem.code,
+          name: menuItem.name,
+          price: safeNum(menuItem.price, 0),
+          qty: addQty
+        });
+      }
+      renderCart();
+    }
+
+    function updateCartQty(itemId, delta) {
+      const idx = posOrder.items.findIndex(it => it.id === itemId);
+      if (idx === -1) return;
+      const nextQty = safeNum(posOrder.items[idx].qty, 0) + delta;
+      if (nextQty <= 0) {
+        posOrder.items.splice(idx, 1);
+      } else {
+        posOrder.items[idx].qty = nextQty;
+      }
+      renderCart();
+    }
+
+    function removeCartItem(itemId) {
+      posOrder.items = posOrder.items.filter(it => it.id !== itemId);
+      renderCart();
+    }
+
+    function setPaymentMode(mode) {
+      posOrder.paymentMode = mode;
+      document.querySelectorAll('.pay-mode-btn').forEach(btn => {
+        const isActive = btn.dataset.pay === mode;
+        btn.classList.toggle('hl-active-btn', isActive);
+        btn.classList.toggle('border-slate-200', !isActive);
+        btn.classList.toggle('bg-white', !isActive);
+        btn.classList.toggle('text-slate-700', !isActive);
+        btn.classList.toggle('hover:bg-slate-100', !isActive);
+      });
+    }
+
+    function setOrderType(type) {
+      posOrder.orderType = type;
+      if (type === 'Dine-In') {
+        if (!posOrder.tableNo) posOrder.tableNo = 'T1';
+        loadTableOrderIfPresent(posOrder.tableNo);
+      }
+      renderOrderTypeUI();
+      renderCart();
+    }
+
+    function handlePosTableChange(tableNo) {
+      posOrder.tableNo = tableNo;
+      if (posOrder.orderType === 'Dine-In' && !posOrder.editingBillId) {
+        loadTableOrderIfPresent(tableNo);
+      }
+      renderOrderTypeUI();
+      renderCart();
+    }
+
+    function loadTableOrderIfPresent(tableNo) {
+      if (posOrder.editingBillId) return;
+      const running = appState.tables[tableNo];
+      if (running && Array.isArray(running.items) && running.items.length > 0) {
+        posOrder.items = JSON.parse(JSON.stringify(running.items));
+        posOrder.customerName = running.customerName || '';
+        posOrder.customerPhone = running.customerPhone || '';
+      } else {
+        posOrder.items = [];
+        posOrder.customerName = '';
+        posOrder.customerPhone = '';
+      }
+      syncPosMetaInputs();
+    }
+
+    function syncPosMetaInputs() {
+      const nameEl = document.getElementById('pos-cust-name');
+      const phoneEl = document.getElementById('pos-cust-phone');
+      if (nameEl) nameEl.value = posOrder.customerName || '';
+      if (phoneEl) phoneEl.value = posOrder.customerPhone || '';
+    }
+
+    function updateCurrentOrderMeta() {
+      posOrder.customerName = document.getElementById('pos-cust-name')?.value || '';
+      posOrder.customerPhone = document.getElementById('pos-cust-phone')?.value || '';
+    }
+
+    function renderOrderTypeUI() {
+      const types = [
+        { id: 'tab-type-dinein',   val: 'Dine-In',  label: '🍽️ Dine-In' },
+        { id: 'tab-type-takeaway', val: 'Takeaway', label: '🛍️ Takeaway' },
+        { id: 'tab-type-delivery', val: 'Delivery', label: '🛵 Delivery' }
+      ];
+      types.forEach(t => {
+        const el = document.getElementById(t.id);
+        if (!el) return;
+        const active = posOrder.orderType === t.val;
+        el.classList.toggle('hl-active-btn', active);
+        el.classList.toggle('text-slate-600', !active);
+        el.classList.toggle('hover:bg-white', !active);
+        el.innerHTML = active
+          ? `<span class="h-1.5 w-1.5 rounded-full bg-white"></span><span>${t.label}</span><span>✓</span>`
+          : `<span>${t.label}</span>`;
+      });
+
+      const isDineIn = posOrder.orderType === 'Dine-In';
+      document.getElementById('pos-table-selector-wrap')?.classList.toggle('hidden', !isDineIn);
+      document.getElementById('pos-quick-tables-wrap')?.classList.toggle('hidden', !isDineIn);
+
+      renderPosTableSelect();
+      renderQuickTablesBar();
+      updateLiveStatusBar();
+    }
+
+    function renderPosTableSelect() {
+      const sel = document.getElementById('pos-table-select');
+      const pill = document.getElementById('pos-table-status-pill');
+      if (!sel) return;
+
+      sel.innerHTML = TABLE_LIST.map(t => {
+        const occ = Boolean(appState.tables[t] && appState.tables[t].items?.length);
+        return `<option value="${t}" ${posOrder.tableNo === t ? 'selected' : ''}>${t}${occ ? ' (Running)' : ''}</option>`;
+      }).join('');
+
+      const isOcc = Boolean(appState.tables[posOrder.tableNo] && appState.tables[posOrder.tableNo].items?.length);
+      if (pill) {
+        pill.textContent = isOcc ? 'Occupied' : 'Vacant';
+        pill.className = isOcc
+          ? 'rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800'
+          : 'rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700';
+      }
+    }
+
+    function renderQuickTablesBar() {
+      const bar = document.getElementById('pos-quick-tables-bar');
+      if (!bar) return;
+
+      bar.innerHTML = TABLE_LIST.map(t => {
+        const running = appState.tables[t];
+        const count = running && Array.isArray(running.items)
+          ? running.items.reduce((s, i) => s + safeNum(i.qty, 0), 0)
+          : 0;
+        const isActive = posOrder.tableNo === t;
+        const isOccupied = count > 0;
+
+        let cls = 'relative flex items-center justify-center rounded-xl border py-1.5 text-xs font-extrabold transition cursor-pointer ';
+        if (isActive) {
+          cls += 'hl-table-active';
+        } else if (isOccupied) {
+          cls += 'border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200';
+        } else {
+          cls += 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50';
+        }
+
+        return `
+          <button type="button" onclick="handlePosTableChange('${t}')" data-focus-label="Table ${t}" class="${cls}">
+            <span>${t}</span>
+            ${isOccupied ? `<span class="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold text-white shadow-xs">${count}</span>` : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function updateLiveStatusBar() {
+      const orderTypeBadge = document.getElementById('live-status-order-type');
+      const tableBadge = document.getElementById('live-status-table');
+      const cartSub = document.getElementById('cart-meta-subtitle');
+      const billBadge = document.getElementById('pos-bill-badge');
+
+      if (orderTypeBadge) {
+        orderTypeBadge.innerHTML = `<span class="h-1.5 w-1.5 rounded-full bg-white"></span><span>${escapeHtml(posOrder.orderType.toUpperCase())}</span>`;
+      }
+      if (tableBadge) {
+        if (posOrder.orderType === 'Dine-In') {
+          tableBadge.classList.remove('hidden');
+          tableBadge.textContent = `🪑 Table ${posOrder.tableNo}`;
+        } else {
+          tableBadge.classList.add('hidden');
+        }
+      }
+      if (cartSub) {
+        cartSub.textContent = posOrder.orderType === 'Dine-In'
+          ? `Dine-In • Table ${posOrder.tableNo}`
+          : posOrder.orderType;
+      }
+      if (billBadge) {
+        billBadge.textContent = posOrder.editingBillNo || `BILL-${padCode(appState.nextBillSeq, 3)}`;
+      }
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cart-items-container');
+      const countEl = document.getElementById('cart-item-count');
+      const editBanner = document.getElementById('pos-edit-banner');
+      const editBillNoEl = document.getElementById('pos-edit-bill-no');
+      const settleBtn = document.getElementById('btn-settle-print');
+
+      if (editBanner) {
+        editBanner.classList.toggle('hidden', !posOrder.editingBillId);
+        editBanner.classList.toggle('flex', Boolean(posOrder.editingBillId));
+      }
+      if (editBillNoEl && posOrder.editingBillNo) {
+        editBillNoEl.textContent = posOrder.editingBillNo;
+      }
+      if (settleBtn) {
+        settleBtn.innerHTML = posOrder.editingBillId
+          ? `<span>💾 Update & Print</span><kbd class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">F8</kbd>`
+          : `<span>🖨️ Settle & Print</span><kbd class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">F8</kbd>`;
+      }
+
+      const totalQty = posOrder.items.reduce((s, it) => s + safeNum(it.qty, 0), 0);
+      if (countEl) countEl.textContent = `${totalQty} item${totalQty === 1 ? '' : 's'}`;
+
+      if (!posOrder.items.length) {
+        container.innerHTML = `
+          <div class="flex h-full flex-col items-center justify-center py-10 text-center text-slate-400">
+            <div class="text-3xl mb-2">🍽️</div>
+            <p class="text-xs font-semibold text-slate-500">Cart is empty</p>
+            <p class="mt-1 text-[11px]">Click dishes or press <kbd class="rounded bg-slate-100 px-1 py-0.5 font-bold text-slate-600">F2</kbd> to type item code.</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = posOrder.items.map(it => {
+          const lineTotal = safeNum(it.price, 0) * safeNum(it.qty, 0);
+          return `
+            <div class="flex items-center justify-between gap-2 py-2.5">
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-xs font-bold text-slate-800">${escapeHtml(it.name)}</div>
+                <div class="text-[11px] text-slate-500">${escapeHtml(it.code)} • ${formatCurrency(it.price)} each</div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="updateCartQty('${escapeHtml(it.id)}', -1)" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-200">−</button>
+                <span class="w-6 text-center text-xs font-extrabold text-slate-900">${safeNum(it.qty, 0)}</span>
+                <button type="button" onclick="updateCartQty('${escapeHtml(it.id)}', 1)" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-200">+</button>
+              </div>
+              <div class="w-16 text-right text-xs font-extrabold text-slate-900">${formatCurrency(lineTotal)}</div>
+              <button type="button" onclick="removeCartItem('${escapeHtml(it.id)}')" class="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Remove">✕</button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const totals = calculateTotals();
+      document.getElementById('bill-subtotal').textContent = formatCurrencyFixed(totals.subtotal);
+      document.getElementById('bill-parcel-amount').textContent = formatCurrencyFixed(totals.parcelCharge);
+      document.getElementById('bill-gst-label').textContent = `Apply GST (${totals.gstRate}%)`;
+      document.getElementById('bill-gst-amount').textContent = formatCurrencyFixed(totals.gstAmount);
+      document.getElementById('bill-roundoff').textContent = (totals.roundOff >= 0 ? '+' : '') + formatCurrencyFixed(totals.roundOff);
+      document.getElementById('bill-grand-total').textContent = formatCurrency(totals.grandTotal);
+
+      setPaymentMode(posOrder.paymentMode);
+      updateLiveStatusBar();
+    }
+
+    function clearCurrentOrder(askConfirm = false) {
+      if (askConfirm && posOrder.items.length > 0) {
+        showConfirmModal(
+          'Clear Current Order?',
+          'This will remove all items from the current cart. Sticky Parcel & GST checkboxes remain unchanged.',
+          () => clearCurrentOrder(false),
+          'Clear Cart'
+        );
+        return;
+      }
+
+      posOrder.items = [];
+      posOrder.customerName = '';
+      posOrder.customerPhone = '';
+      posOrder.editingBillId = null;
+      posOrder.editingBillNo = null;
+      // Preserve sticky Parcel & GST toggles exactly as manually set
+      syncStickyTogglesToPos();
+      syncPosMetaInputs();
+      renderOrderTypeUI();
+      renderCart();
+      document.getElementById('fast-item-input')?.focus();
+    }
+
+    function cancelEditMode() {
+      clearCurrentOrder(false);
+      showToast('Edit mode cancelled.', 'info');
+    }
+
+    // ------------------------------------------------------------
+    // 8. KOT & HOLD + SETTLE & PRINT ACTIONS
+    // ------------------------------------------------------------
+    function handlePrintKotAndHold() {
+      if (!posOrder.items.length) {
+        showToast('Add at least one item before printing KOT.', 'warning');
+        return;
+      }
+
+      const kotNo = `KOT-${padCode(appState.nextKotSeq, 3)}`;
+      appState.nextKotSeq += 1;
+
+      const kotData = {
+        kotNo,
+        orderType: posOrder.orderType,
+        tableNo: posOrder.orderType === 'Dine-In' ? posOrder.tableNo : '',
+        customerName: posOrder.customerName.trim(),
+        items: JSON.parse(JSON.stringify(posOrder.items)),
+        createdAt: new Date().toISOString()
+      };
+
+      if (posOrder.orderType === 'Dine-In') {
+        const existing = appState.tables[posOrder.tableNo];
+        appState.tables[posOrder.tableNo] = {
+          tableNo: posOrder.tableNo,
+          items: JSON.parse(JSON.stringify(posOrder.items)),
+          customerName: posOrder.customerName.trim(),
+          customerPhone: posOrder.customerPhone.trim(),
+          startedAt: existing?.startedAt || new Date().toISOString(),
+          lastKotNo: kotNo
+        };
+      }
+
+      saveState();
+      renderOrderTypeUI();
+      renderLiveTables();
+      updateNavBadges();
+
+      const html = buildKotReceiptHtml(kotData);
+      openThermalPrintPipeline(`80mm KOT — ${kotNo}`, html, { type: 'kot', data: kotData });
+      showToast(`${kotNo} sent to kitchen${posOrder.orderType === 'Dine-In' ? ' & held on ' + posOrder.tableNo : ''}!`, 'success');
+    }
+
+    function handleSettleAndPrint() {
+      if (!posOrder.items.length) {
+        showToast('Add at least one item to settle the bill.', 'warning');
+        return;
+      }
+
+      const totals = calculateTotals();
+      const nowIso = new Date().toISOString();
+      let savedBill = null;
+
+      if (posOrder.editingBillId) {
+        const idx = appState.bills.findIndex(b => b.id === posOrder.editingBillId);
+        if (idx !== -1) {
+          savedBill = {
+            ...appState.bills[idx],
+            orderType: posOrder.orderType,
+            tableNo: posOrder.orderType === 'Dine-In' ? posOrder.tableNo : '',
+            customerName: posOrder.customerName.trim(),
+            customerPhone: posOrder.customerPhone.trim(),
+            items: JSON.parse(JSON.stringify(posOrder.items)),
+            subtotal: totals.subtotal,
+            parcelCharge: totals.parcelCharge,
+            gstApplied: totals.gstApplied,
+            gstRate: totals.gstRate,
+            gstAmount: totals.gstAmount,
+            roundOff: totals.roundOff,
+            grandTotal: totals.grandTotal,
+            paymentMode: posOrder.paymentMode,
+            updatedAt: nowIso
+          };
+          appState.bills[idx] = savedBill;
+        }
+      }
+
+      if (!savedBill) {
+        const billNo = `BILL-${padCode(appState.nextBillSeq, 3)}`;
+        appState.nextBillSeq += 1;
+        savedBill = {
+          id: 'b_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+          billNo,
+          orderType: posOrder.orderType,
+          tableNo: posOrder.orderType === 'Dine-In' ? posOrder.tableNo : '',
+          customerName: posOrder.customerName.trim(),
+          customerPhone: posOrder.customerPhone.trim(),
+          items: JSON.parse(JSON.stringify(posOrder.items)),
+          subtotal: totals.subtotal,
+          parcelCharge: totals.parcelCharge,
+          gstApplied: totals.gstApplied,
+          gstRate: totals.gstRate,
+          gstAmount: totals.gstAmount,
+          roundOff: totals.roundOff,
+          grandTotal: totals.grandTotal,
+          paymentMode: posOrder.paymentMode,
+          createdAt: nowIso
+        };
+        appState.bills.unshift(savedBill);
+
+        // Free occupied Dine-In table upon settlement
+        if (posOrder.orderType === 'Dine-In' && posOrder.tableNo && appState.tables[posOrder.tableNo]) {
+          delete appState.tables[posOrder.tableNo];
+        }
+      }
+
+      saveState();
+      clearCurrentOrder(false);
+      renderLiveTables();
+      renderReports();
+      updateHeaderTodaySales();
+      updateNavBadges();
+
+      const receiptHtml = buildBillReceiptHtml(savedBill);
+      openThermalPrintPipeline(`80mm Receipt — ${savedBill.billNo}`, receiptHtml, { type: 'bill', data: savedBill });
+      showToast(`Bill ${savedBill.billNo} settled (${formatCurrency(savedBill.grandTotal)})!`, 'success');
+    }
+
+    // ------------------------------------------------------------
+    // 9. POS MENU GRID, CATEGORY TABS & FAST KEYBOARD ENTRY
+    // ------------------------------------------------------------
+    function renderPosCategoryTabs() {
+      const container = document.getElementById('pos-category-tabs');
+      if (!container) return;
+
+      container.innerHTML = CATEGORIES.map(cat => {
+        const active = activeCategory === cat;
+        return `
+          <button type="button" onclick="selectPosCategory('${cat}')" class="rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+            active
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+          }">${cat}</button>
+        `;
+      }).join('');
+    }
+
+    function selectPosCategory(cat) {
+      activeCategory = cat;
+      renderPosCategoryTabs();
+      renderPosMenuGrid();
+    }
+
+    function clearPosGridSearch() {
+      const input = document.getElementById('pos-grid-search');
+      if (input) input.value = '';
+      renderPosMenuGrid();
+    }
+
+    function renderPosMenuGrid() {
+      const grid = document.getElementById('pos-menu-grid');
+      const searchInput = document.getElementById('pos-grid-search');
+      const clearBtn = document.getElementById('pos-grid-search-clear');
+      if (!grid) return;
+
+      const q = (searchInput?.value || '').trim().toLowerCase();
+      if (clearBtn) clearBtn.classList.toggle('hidden', !q);
+
+      const filtered = appState.menu.filter(item => {
+        if (activeCategory !== 'All' && item.category !== activeCategory) return false;
+        if (q && !item.name.toLowerCase().includes(q) && !item.code.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      if (!filtered.length) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-xs text-slate-400">
+            No matching dishes found.
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const isAvail = Boolean(item.available);
+        return `
+          <button
+            type="button"
+            onclick="handleMenuCardClick('${escapeHtml(item.id)}')"
+            ${!isAvail ? 'disabled' : ''}
+            class="group flex flex-col justify-between rounded-2xl border p-3 text-left transition ${
+              isAvail
+                ? 'border-slate-200 bg-white shadow-2xs hover:border-sky-400 hover:shadow-md active:scale-95 cursor-pointer'
+                : 'border-slate-200 bg-slate-100 opacity-55 cursor-not-allowed'
+            }"
+          >
+            <div class="flex items-start justify-between gap-1">
+              <span class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">${escapeHtml(item.code)}</span>
+              <span class="rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                isAvail ? 'bg-sky-50 text-sky-700' : 'bg-rose-100 text-rose-700'
+              }">${isAvail ? escapeHtml(item.category) : 'SOLD OUT'}</span>
+            </div>
+            <div class="my-2 text-xs font-bold leading-snug text-slate-800 line-clamp-2">${escapeHtml(item.name)}</div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-extrabold text-emerald-700">${formatCurrency(item.price)}</span>
+              ${isAvail ? '<span class="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-sky-600 group-hover:text-white">+ Add</span>' : ''}
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function handleMenuCardClick(itemId) {
+      const item = appState.menu.find(m => m.id === itemId);
+      if (item) addItemToCart(item, 1);
+    }
+
+    function setupFastKeyboardEntry() {
+      const itemInput = document.getElementById('fast-item-input');
+      const qtyInput = document.getElementById('fast-qty-input');
+      const dropdown = document.getElementById('fast-autocomplete');
+      if (!itemInput || !qtyInput || !dropdown) return;
+
+      itemInput.addEventListener('input', () => {
+        const q = itemInput.value.trim().toLowerCase();
+        if (!q) {
+          dropdown.classList.add('hidden');
+          autocompleteMatches = [];
+          autocompleteIndex = -1;
+          return;
+        }
+        autocompleteMatches = appState.menu.filter(m =>
+          m.code.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+        ).slice(0, 8);
+        autocompleteIndex = autocompleteMatches.length ? 0 : -1;
+        renderFastAutocomplete();
+      });
+
+      itemInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' && autocompleteMatches.length) {
+          e.preventDefault();
+          autocompleteIndex = (autocompleteIndex + 1) % autocompleteMatches.length;
+          renderFastAutocomplete();
+        } else if (e.key === 'ArrowUp' && autocompleteMatches.length) {
+          e.preventDefault();
+          autocompleteIndex = (autocompleteIndex - 1 + autocompleteMatches.length) % autocompleteMatches.length;
+          renderFastAutocomplete();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const chosen = resolveFastEntryMatch();
+          if (chosen) {
+            itemInput.value = chosen.code;
+            dropdown.classList.add('hidden');
+            qtyInput.focus();
+            qtyInput.select();
+          } else {
+            showToast('Item not found. Check code or name.', 'warning');
+          }
+        } else if (e.key === 'Escape') {
+          dropdown.classList.add('hidden');
+        }
+      });
+
+      qtyInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addFastEntryItem();
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!itemInput.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.add('hidden');
+        }
+      });
+    }
+
+    function renderFastAutocomplete() {
+      const dropdown = document.getElementById('fast-autocomplete');
+      if (!dropdown) return;
+      if (!autocompleteMatches.length) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+      dropdown.classList.remove('hidden');
+      dropdown.innerHTML = autocompleteMatches.map((m, idx) => `
+        <button type="button" onmousedown="selectAutocompleteItem('${escapeHtml(m.id)}')" class="flex w-full items-center justify-between px-3 py-2 text-left text-xs ${
+          idx === autocompleteIndex ? 'bg-sky-50 font-bold text-sky-900' : 'text-slate-700 hover:bg-slate-50'
+        }">
+          <span><span class="font-mono font-bold text-slate-500 mr-2">${escapeHtml(m.code)}</span>${escapeHtml(m.name)}</span>
+          <span class="font-bold ${m.available ? 'text-emerald-700' : 'text-rose-600'}">${m.available ? formatCurrency(m.price) : 'Sold Out'}</span>
+        </button>
+      `).join('');
+    }
+
+    function selectAutocompleteItem(itemId) {
+      const item = appState.menu.find(m => m.id === itemId);
+      if (!item) return;
+      const itemInput = document.getElementById('fast-item-input');
+      const qtyInput = document.getElementById('fast-qty-input');
+      document.getElementById('fast-autocomplete')?.classList.add('hidden');
+      if (itemInput) itemInput.value = item.code;
+      if (qtyInput) {
+        qtyInput.focus();
+        qtyInput.select();
+      }
+    }
+
+    function resolveFastEntryMatch() {
+      const q = (document.getElementById('fast-item-input')?.value || '').trim().toLowerCase();
+      if (!q) return null;
+      const exactCode = appState.menu.find(m => m.code.toLowerCase() === q || m.code === padCode(q, 3));
+      if (exactCode) return exactCode;
+      if (autocompleteIndex >= 0 && autocompleteMatches[autocompleteIndex]) {
+        return autocompleteMatches[autocompleteIndex];
+      }
+      return appState.menu.find(m => m.name.toLowerCase().includes(q)) || null;
+    }
+
+    function addFastEntryItem() {
+      const itemInput = document.getElementById('fast-item-input');
+      const qtyInput = document.getElementById('fast-qty-input');
+      const chosen = resolveFastEntryMatch();
+      if (!chosen) {
+        showToast('Enter a valid item code or name.', 'warning');
+        itemInput?.focus();
+        return;
+      }
+      const qty = Math.max(1, Math.floor(safeNum(qtyInput?.value, 1)));
+      addItemToCart(chosen, qty);
+      if (itemInput) {
+        itemInput.value = '';
+        itemInput.focus();
+      }
+      if (qtyInput) qtyInput.value = 1;
+      document.getElementById('fast-autocomplete')?.classList.add('hidden');
+    }
+
+    // ------------------------------------------------------------
+    // 10. LIVE TABLES VIEW (T1 - T12)
+    // ------------------------------------------------------------
+    function renderLiveTables() {
+      const grid = document.getElementById('tables-grid');
+      if (!grid) return;
+
+      let occupiedCount = 0;
+      grid.innerHTML = TABLE_LIST.map(t => {
+        const running = appState.tables[t];
+        const isOcc = Boolean(running && Array.isArray(running.items) && running.items.length > 0);
+        if (isOcc) occupiedCount += 1;
+
+        const subtotal = isOcc
+          ? running.items.reduce((sum, it) => sum + safeNum(it.price, 0) * safeNum(it.qty, 0), 0)
+          : 0;
+        const totalQty = isOcc
+          ? running.items.reduce((sum, it) => sum + safeNum(it.qty, 0), 0)
+          : 0;
+
+        return `
+          <div onclick="openTableInPos('${t}')" class="cursor-pointer rounded-2xl border-2 p-4 transition hover:shadow-md ${
+            isOcc
+              ? 'border-amber-400 bg-amber-50/70'
+              : 'border-slate-200 bg-white hover:border-emerald-400'
+          }">
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-extrabold text-slate-900">${t}</span>
+              <span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                isOcc ? 'bg-amber-500 text-slate-950' : 'bg-emerald-100 text-emerald-700'
+              }">${isOcc ? 'Occupied' : 'Vacant'}</span>
+            </div>
+            ${isOcc ? `
+              <div class="mt-3 space-y-1 text-xs">
+                <div class="flex justify-between text-slate-600">
+                  <span>Items:</span>
+                  <span class="font-bold text-slate-900">${totalQty}</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                  <span>Running:</span>
+                  <span class="font-extrabold text-emerald-700">${formatCurrency(subtotal)}</span>
+                </div>
+                <div class="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-amber-200/80">
+                  <span>⏱ ${escapeHtml(getElapsedText(running.startedAt))}</span>
+                  <span class="font-bold text-amber-800">Open POS →</span>
+                </div>
+              </div>
+            ` : `
+              <div class="mt-4 text-xs text-slate-400">Tap to start Dine-In order</div>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      const vacEl = document.getElementById('tables-vacant-count');
+      const occEl = document.getElementById('tables-occupied-count');
+      if (vacEl) vacEl.textContent = TABLE_LIST.length - occupiedCount;
+      if (occEl) occEl.textContent = occupiedCount;
+    }
+
+    function openTableInPos(tableNo) {
+      posOrder.editingBillId = null;
+      posOrder.editingBillNo = null;
+      posOrder.orderType = 'Dine-In';
+      posOrder.tableNo = tableNo;
+      loadTableOrderIfPresent(tableNo);
+      switchView('pos');
+      renderOrderTypeUI();
+      renderCart();
+      showToast(`Loaded Table ${tableNo} in POS.`, 'info');
+    }
+
+    // ------------------------------------------------------------
+    // 11. MENU & AVAILABILITY MANAGER
+    // ------------------------------------------------------------
+    function renderMenuManager() {
+      const tbody = document.getElementById('menu-mgr-tbody');
+      if (!tbody) return;
+
+      const q = (document.getElementById('menu-mgr-search')?.value || '').trim().toLowerCase();
+      const cat = document.getElementById('menu-mgr-cat')?.value || 'All';
+      const avail = document.getElementById('menu-mgr-avail')?.value || 'all';
+
+      const filtered = appState.menu.filter(m => {
+        if (cat !== 'All' && m.category !== cat) return false;
+        if (avail === 'available' && !m.available) return false;
+        if (avail === 'soldout' && m.available) return false;
+        if (q && !m.name.toLowerCase().includes(q) && !m.code.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">No menu items match your filter.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(m => `
+        <tr class="${m.available ? 'hover:bg-slate-50' : 'bg-rose-50/40'}">
+          <td class="px-4 py-3 font-mono font-bold text-slate-700">${escapeHtml(m.code)}</td>
+          <td class="px-4 py-3 font-bold text-slate-900">${escapeHtml(m.name)}</td>
+          <td class="px-4 py-3"><span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">${escapeHtml(m.category)}</span></td>
+          <td class="px-4 py-3 text-right font-extrabold text-slate-900">${formatCurrency(m.price)}</td>
+          <td class="px-4 py-3 text-center">
+            <button type="button" onclick="toggleMenuAvailability('${escapeHtml(m.id)}')" class="rounded-full px-3 py-1 text-[11px] font-bold transition ${
+              m.available
+                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                : 'bg-rose-600 text-white hover:bg-rose-700'
+            }">
+              ${m.available ? '✓ Available' : '✕ Sold Out'}
+            </button>
+          </td>
+          <td class="px-4 py-3 text-right space-x-1.5">
+            <button type="button" onclick="openMenuModal('${escapeHtml(m.id)}')" class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Edit</button>
+            <button type="button" onclick="deleteMenuItem('${escapeHtml(m.id)}')" class="rounded-lg border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function toggleMenuAvailability(itemId) {
+      const item = appState.menu.find(m => m.id === itemId);
+      if (!item) return;
+      item.available = !item.available;
+      saveState();
+      renderMenuManager();
+      renderPosMenuGrid();
+      updateNavBadges();
+      showToast(`${item.name} marked ${item.available ? 'Available' : 'Sold Out'}.`, item.available ? 'success' : 'warning');
+    }
+
+    function setAllMenuAvailability(status) {
+      appState.menu.forEach(m => { m.available = Boolean(status); });
+      saveState();
+      renderMenuManager();
+      renderPosMenuGrid();
+      updateNavBadges();
+      showToast('All menu items marked Available.', 'success');
+    }
+
+    function openMenuModal(editId = null) {
+      const editItem = editId ? appState.menu.find(m => m.id === editId) : null;
+      document.getElementById('menu-modal-title').textContent = editItem ? 'Edit Menu Item' : 'Add Menu Item';
+      document.getElementById('mm-edit-id').value = editItem ? editItem.id : '';
+      document.getElementById('mm-code').value = editItem ? editItem.code : getNextSequentialMenuCode();
+      document.getElementById('mm-category').value = editItem ? editItem.category : 'Tiffin';
+      document.getElementById('mm-name').value = editItem ? editItem.name : '';
+      document.getElementById('mm-price').value = editItem ? editItem.price : '';
+      document.getElementById('mm-available').checked = editItem ? Boolean(editItem.available) : true;
+
+      document.getElementById('confirm-modal').classList.add('hidden');
+      document.getElementById('menu-item-modal').classList.remove('hidden');
+      const backdrop = document.getElementById('modal-backdrop');
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+      setTimeout(() => document.getElementById('mm-name')?.focus(), 50);
+    }
+
+    function saveMenuItemForm(e) {
+      e.preventDefault();
+      const editId = document.getElementById('mm-edit-id').value.trim();
+      const code = document.getElementById('mm-code').value.trim();
+      const category = document.getElementById('mm-category').value;
+      const name = document.getElementById('mm-name').value.trim();
+      const price = Math.max(0, safeNum(document.getElementById('mm-price').value, 0));
+      const available = Boolean(document.getElementById('mm-available').checked);
+
+      if (!code || !name) {
+        showToast('Item Code and Name are required.', 'warning');
+        return;
+      }
+
+      if (editId) {
+        const idx = appState.menu.findIndex(m => m.id === editId);
+        if (idx !== -1) {
+          appState.menu[idx] = { ...appState.menu[idx], code, category, name, price, available };
+        }
+        showToast(`Updated "${name}".`, 'success');
+      } else {
+        appState.menu.push({
+          id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+          code,
+          category,
+          name,
+          price,
+          available
+        });
+        showToast(`Added "${name}" (${code}).`, 'success');
+      }
+
+      saveState();
+      closeAllModals();
+      renderMenuManager();
+      renderPosMenuGrid();
+      updateNavBadges();
+    }
+
+    function deleteMenuItem(itemId) {
+      const item = appState.menu.find(m => m.id === itemId);
+      if (!item) return;
+      showConfirmModal(
+        'Delete Menu Item?',
+        `Remove "${item.name}" (${item.code}) from your menu? Past bills will not be affected.`,
+        () => {
+          appState.menu = appState.menu.filter(m => m.id !== itemId);
+          saveState();
+          renderMenuManager();
+          renderPosMenuGrid();
+          updateNavBadges();
+          showToast(`Deleted "${item.name}".`, 'info');
+        },
+        'Delete'
+      );
+    }
+
+    // ------------------------------------------------------------
+    // 12. SALES & REPORTS (KPIs, FILTERING, REPRINT, EDIT, DELETE)
+    // ------------------------------------------------------------
+    function getFilteredBills() {
+      const q = (document.getElementById('report-search')?.value || '').trim().toLowerCase();
+      const fromDate = document.getElementById('report-from-date')?.value || '';
+      const toDate = document.getElementById('report-to-date')?.value || '';
+
+      return appState.bills.filter(b => {
+        const key = getLocalDateKey(b.createdAt);
+        if (fromDate && key < fromDate) return false;
+        if (toDate && key > toDate) return false;
+        if (q) {
+          const hay = `${b.billNo || ''} ${b.tableNo || ''} ${b.orderType || ''} ${b.customerName || ''} ${b.paymentMode || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function clearReportFilters() {
+      const s = document.getElementById('report-search');
+      const f = document.getElementById('report-from-date');
+      const t = document.getElementById('report-to-date');
+      if (s) s.value = '';
+      if (f) f.value = '';
+      if (t) t.value = '';
+      renderReports();
+    }
+
+    function renderReports() {
+      const todayKey = getLocalDateKey();
+      const monthPrefix = todayKey.slice(0, 7);
+
+      let todaySales = 0, todayCount = 0;
+      let monthSales = 0, monthCount = 0;
+      let payCash = 0, payUpi = 0, payCard = 0;
+
+      for (const b of appState.bills) {
+        const key = getLocalDateKey(b.createdAt);
+        const gt = safeNum(b.grandTotal, 0);
+        if (key === todayKey) {
+          todaySales += gt;
+          todayCount += 1;
+          if (b.paymentMode === 'UPI') payUpi += gt;
+          else if (b.paymentMode === 'Card') payCard += gt;
+          else payCash += gt;
+        }
+        if (key.startsWith(monthPrefix)) {
+          monthSales += gt;
+          monthCount += 1;
+        }
+      }
+
+      document.getElementById('kpi-today-sales').textContent = formatCurrency(todaySales);
+      document.getElementById('kpi-today-bills').textContent = `${todayCount} bill${todayCount === 1 ? '' : 's'} today`;
+      document.getElementById('kpi-today-bills-big').textContent = todayCount;
+      document.getElementById('kpi-total-bills-sub').textContent = `${appState.bills.length} total bills all time`;
+      document.getElementById('kpi-month-sales').textContent = formatCurrency(monthSales);
+      document.getElementById('kpi-month-bills').textContent = `${monthCount} bill${monthCount === 1 ? '' : 's'} this month`;
+      document.getElementById('kpi-pay-cash').textContent = formatCurrency(payCash);
+      document.getElementById('kpi-pay-upi').textContent = formatCurrency(payUpi);
+      document.getElementById('kpi-pay-card').textContent = formatCurrency(payCard);
+
+      const filtered = getFilteredBills();
+      const tbody = document.getElementById('report-bills-tbody');
+      if (!tbody) return;
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">No bills found for the selected filter.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(b => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 font-mono font-bold text-slate-900">${escapeHtml(b.billNo)}</td>
+          <td class="px-4 py-3 text-slate-600">${escapeHtml(formatDateTime(b.createdAt))}</td>
+          <td class="px-4 py-3">
+            <span class="font-semibold text-slate-800">${escapeHtml(b.orderType || 'Dine-In')}${b.tableNo ? ' • ' + escapeHtml(b.tableNo) : ''}</span>
+            ${b.customerName ? `<div class="text-[11px] text-slate-500">${escapeHtml(b.customerName)}</div>` : ''}
+          </td>
+          <td class="px-4 py-3"><span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">${escapeHtml(b.paymentMode || 'Cash')}</span></td>
+          <td class="px-4 py-3 text-right font-extrabold text-emerald-700">${formatCurrency(b.grandTotal)}</td>
+          <td class="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+            <button type="button" data-action="reprint" data-id="${escapeHtml(b.id)}" class="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-slate-700">🖨️ Print</button>
+            <button type="button" data-action="edit" data-id="${escapeHtml(b.id)}" class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Edit</button>
+            <button type="button" data-action="delete" data-id="${escapeHtml(b.id)}" class="rounded-lg border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function setupReportsTableDelegation() {
+      const tbody = document.getElementById('report-bills-tbody');
+      if (!tbody) return;
+      tbody.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (action === 'reprint') reprintBill(id);
+        else if (action === 'edit') editBillInPos(id);
+        else if (action === 'delete') deleteBill(id);
+      });
+    }
+
+    function reprintBill(billId) {
+      const bill = appState.bills.find(b => b.id === billId);
+      if (!bill) {
+        showToast('Bill not found.', 'error');
+        return;
+      }
+      const html = buildBillReceiptHtml(bill);
+      openThermalPrintPipeline(`80mm Receipt — ${bill.billNo}`, html, { type: 'bill', data: bill });
+    }
+
+    function editBillInPos(billId) {
+      const bill = appState.bills.find(b => b.id === billId);
+      if (!bill) return;
+
+      posOrder.editingBillId = bill.id;
+      posOrder.editingBillNo = bill.billNo;
+      posOrder.orderType = bill.orderType || 'Dine-In';
+      posOrder.tableNo = bill.tableNo || 'T1';
+      posOrder.customerName = bill.customerName || '';
+      posOrder.customerPhone = bill.customerPhone || '';
+      posOrder.items = JSON.parse(JSON.stringify(bill.items || []));
+      posOrder.paymentMode = bill.paymentMode || 'Cash';
+
+      const parcelAmt = safeNum(bill.parcelCharge, 0);
+      posOrder.parcelEnabled = parcelAmt > 0;
+      posOrder.parcelCharge = parcelAmt;
+      posOrder.gstEnabled = Boolean(bill.gstApplied);
+
+      const parcelToggleEl = document.getElementById('bill-parcel-toggle');
+      const parcelInputEl = document.getElementById('bill-parcel-input');
+      const gstToggleEl = document.getElementById('bill-gst-toggle');
+      if (parcelToggleEl) parcelToggleEl.checked = posOrder.parcelEnabled;
+      if (parcelInputEl) {
+        parcelInputEl.value = posOrder.parcelCharge;
+        parcelInputEl.disabled = !posOrder.parcelEnabled;
+      }
+      if (gstToggleEl) gstToggleEl.checked = posOrder.gstEnabled;
+
+      syncPosMetaInputs();
+      switchView('pos');
+      renderOrderTypeUI();
+      renderCart();
+      showToast(`Loaded ${bill.billNo} for editing.`, 'info');
+    }
+
+    function deleteBill(billId) {
+      const bill = appState.bills.find(b => b.id === billId);
+      if (!bill) return;
+      showConfirmModal(
+        'Delete Saved Bill?',
+        `Permanently delete ${bill.billNo} (${formatCurrency(bill.grandTotal)}) from Sales History?`,
+        () => {
+          appState.bills = appState.bills.filter(b => b.id !== billId);
+          saveState();
+          renderReports();
+          updateHeaderTodaySales();
+          showToast(`Deleted ${bill.billNo}.`, 'info');
+        },
+        'Delete Bill'
+      );
+    }
+
+    function handlePrintSalesReport() {
+      const filtered = getFilteredBills();
+      const fromDate = document.getElementById('report-from-date')?.value || '';
+      const toDate = document.getElementById('report-to-date')?.value || '';
+      const html = buildSalesReportReceiptHtml(filtered, fromDate, toDate);
+      openThermalPrintPipeline('80mm Sales Summary Report', html, { type: 'report', data: { bills: filtered, fromDate, toDate } });
+    }
+
+    // ------------------------------------------------------------
+    // 13. SETTINGS, THEMES, HIGHLIGHT COLORS, BACKUP & SAFE RESET
+    // ------------------------------------------------------------
+    function populateSettingsForm() {
+      const s = appState.settings;
+      document.getElementById('set-name').value = s.name || '';
+      document.getElementById('set-address').value = s.address || '';
+      document.getElementById('set-phone').value = s.phone || '';
+      document.getElementById('set-fssai').value = s.fssai || '';
+      document.getElementById('set-gstin').value = s.gstin || '';
+      document.getElementById('set-gst-rate').value = safeNum(s.defaultGstRate, 5);
+      document.getElementById('set-parcel-charge').value = safeNum(s.defaultParcelCharge, 0);
+      document.getElementById('set-footer').value = s.footerNote || '';
+      document.getElementById('sidebar-shop-name').textContent = s.name || 'Restaurant POS';
+    }
+
+    function saveSettingsForm(e) {
+      e.preventDefault();
+      appState.settings.name = document.getElementById('set-name').value.trim() || 'Restaurant POS';
+      appState.settings.address = document.getElementById('set-address').value.trim();
+      appState.settings.phone = document.getElementById('set-phone').value.trim();
+      appState.settings.fssai = document.getElementById('set-fssai').value.trim();
+      appState.settings.gstin = document.getElementById('set-gstin').value.trim().toUpperCase();
+      appState.settings.defaultGstRate = Math.max(0, safeNum(document.getElementById('set-gst-rate').value, 5));
+      appState.settings.defaultParcelCharge = Math.max(0, safeNum(document.getElementById('set-parcel-charge').value, 0));
+      appState.settings.footerNote = document.getElementById('set-footer').value.trim() || 'Thank You! Visit Again!';
+
+      saveState();
+      populateSettingsForm();
+      renderCart();
+      showToast('Restaurant settings saved!', 'success');
+    }
+
+    function applySidebarTheme(themeId) {
+      const theme = SIDEBAR_THEMES.find(t => t.id === themeId) || SIDEBAR_THEMES[0];
+      appState.settings.sidebarTheme = theme.id;
+      const root = document.documentElement;
+      root.style.setProperty('--sb-bg', theme.bg);
+      root.style.setProperty('--sb-surface', theme.surface);
+      root.style.setProperty('--sb-active', theme.active);
+      root.style.setProperty('--sb-accent', theme.accent);
+
+      const labelEl = document.getElementById('sidebar-theme-label');
+      if (labelEl) labelEl.textContent = theme.name;
+      saveState();
+      renderThemeSelectors();
+    }
+
+    function renderThemeSelectors() {
+      const activeId = appState.settings.sidebarTheme || 'slate';
+      const sbContainer = document.getElementById('sidebar-theme-swatches');
+      const setContainer = document.getElementById('settings-theme-grid');
+
+      if (sbContainer) {
+        sbContainer.innerHTML = SIDEBAR_THEMES.map(t => `
+          <button type="button" title="${t.name}" onclick="applySidebarTheme('${t.id}')" class="h-6 w-6 rounded-full border-2 transition ${
+            t.id === activeId ? 'scale-110 border-white ring-2 ring-white/50' : 'border-white/30 hover:scale-105'
+          }" style="background-color:${t.swatch};"></button>
+        `).join('');
+      }
+
+      if (setContainer) {
+        setContainer.innerHTML = SIDEBAR_THEMES.map(t => `
+          <button type="button" onclick="applySidebarTheme('${t.id}')" class="flex items-center gap-3 rounded-xl border-2 p-3 text-left text-xs font-bold transition ${
+            t.id === activeId ? 'border-sky-600 bg-sky-50 text-sky-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+          }">
+            <span class="h-6 w-6 shrink-0 rounded-full border border-black/15" style="background-color:${t.swatch};"></span>
+            <span>${t.name}</span>
+          </button>
+        `).join('');
+      }
+    }
+
+    function applyHighlightColor(colorId) {
+      const hl = HIGHLIGHT_COLORS.find(c => c.id === colorId) || HIGHLIGHT_COLORS[0];
+      appState.settings.highlightColor = hl.id;
+      const root = document.documentElement;
+      root.style.setProperty('--hl-color', hl.color);
+      root.style.setProperty('--hl-bg', hl.bg);
+      root.style.setProperty('--hl-ring', hl.ring);
+      root.style.setProperty('--hl-text', hl.text);
+
+      const labelEl = document.getElementById('highlight-color-label');
+      if (labelEl) labelEl.textContent = hl.name;
+      saveState();
+      renderHighlightSelectors();
+    }
+
+    function renderHighlightSelectors() {
+      const activeId = appState.settings.highlightColor || 'orange';
+      const sbContainer = document.getElementById('sidebar-highlight-swatches');
+      const setContainer = document.getElementById('settings-highlight-grid');
+
+      if (sbContainer) {
+        sbContainer.innerHTML = HIGHLIGHT_COLORS.map(c => `
+          <button type="button" title="${c.name}" onclick="applyHighlightColor('${c.id}')" class="h-6 w-6 rounded-full border-2 transition ${
+            c.id === activeId ? 'scale-110 border-white ring-2 ring-white/60' : 'border-white/30 hover:scale-105'
+          }" style="background-color:${c.color};"></button>
+        `).join('');
+      }
+
+      if (setContainer) {
+        setContainer.innerHTML = HIGHLIGHT_COLORS.map(c => `
+          <button type="button" onclick="applyHighlightColor('${c.id}')" class="flex items-center gap-3 rounded-xl border-2 p-3 text-left text-xs font-bold transition ${
+            c.id === activeId ? 'border-slate-900 bg-slate-50 text-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+          }">
+            <span class="h-6 w-6 shrink-0 rounded-full border border-black/15" style="background-color:${c.color};"></span>
+            <span>${c.name}</span>
+          </button>
+        `).join('');
+      }
+    }
+
+    function exportJsonBackup(prefix = 'restaurant_pos_backup') {
+      try {
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${prefix}_${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('JSON backup downloaded!', 'success');
+      } catch (err) {
+        console.error('Export backup error:', err);
+        showToast('Could not export JSON backup.', 'error');
+      }
+    }
+
+    function importJsonBackup(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed || !Array.isArray(parsed.menu)) {
+            throw new Error('Invalid backup format');
+          }
+          appState = {
+            ...createDefaultState(),
+            ...parsed,
+            settings: { ...createDefaultState().settings, ...(parsed.settings || {}) }
+          };
+          saveState();
+          refreshEntireUI();
+          showToast('JSON backup restored successfully!', 'success');
+        } catch (err) {
+          console.error('Import error:', err);
+          showToast('Invalid JSON backup file.', 'error');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleSafeResetSliderInput(val) {
+      const pctEl = document.getElementById('safe-reset-percent');
+      if (pctEl) pctEl.textContent = `${val}%`;
+    }
+
+    function handleSafeResetSliderRelease(val) {
+      const slider = document.getElementById('safe-reset-slider');
+      const pctEl = document.getElementById('safe-reset-percent');
+      if (Number(val) >= 100) {
+        exportJsonBackup('auto_safety_backup_before_reset');
+        localStorage.removeItem(STORAGE_KEY);
+        appState = createDefaultState();
+        saveState();
+        clearCurrentOrder(false);
+        refreshEntireUI();
+        showToast('Safety backup downloaded & POS reset to factory defaults.', 'success');
+      }
+      if (slider) slider.value = 0;
+      if (pctEl) pctEl.textContent = '0%';
+    }
+
+    // ------------------------------------------------------------
+    // 14. NAVIGATION, LIVE CURSOR TRACKER, CLOCK & SHORTCUTS
+    // ------------------------------------------------------------
+    function toggleMobileSidebar(open) {
+      const sb = document.getElementById('sidebar');
+      const overlay = document.getElementById('mobile-sidebar-overlay');
+      if (!sb || !overlay) return;
+      if (open) {
+        sb.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sb.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function switchView(viewName) {
+      currentView = viewName;
+      const views = ['pos', 'tables', 'menu', 'reports', 'printer', 'settings'];
+      const titles = {
+        pos: 'POS Billing Counter',
+        tables: 'Live Tables & Running Orders',
+        menu: 'Menu & Item Availability',
+        reports: 'Sales History & Reports',
+        printer: 'Printer Settings & Auto-Print',
+        settings: 'Settings, Backup & Safe Reset'
+      };
+
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.toggle('hidden', v !== viewName);
+      });
+
+      document.querySelectorAll('[data-nav]').forEach(btn => {
+        const active = btn.dataset.nav === viewName;
+        btn.classList.toggle('sidebar-item-active', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('text-slate-200', !active);
+      });
+
+      const titleEl = document.getElementById('view-title');
+      if (titleEl) titleEl.textContent = titles[viewName] || 'Restaurant POS';
+
+      toggleMobileSidebar(false);
+
+      if (viewName === 'tables') renderLiveTables();
+      else if (viewName === 'menu') renderMenuManager();
+      else if (viewName === 'reports') renderReports();
+      else if (viewName === 'printer') renderPrinterSettingsView();
+      else if (viewName === 'settings') populateSettingsForm();
+      else if (viewName === 'pos') {
+        renderOrderTypeUI();
+        renderPosMenuGrid();
+        renderCart();
+      }
+    }
+
+    function setupLiveCursorTracker() {
+      const cursorLabel = document.getElementById('live-status-cursor');
+      if (!cursorLabel) return;
+      document.addEventListener('focusin', (e) => {
+        const target = e.target;
+        if (!target) return;
+        const label = target.getAttribute('data-focus-label');
+        if (label) {
+          cursorLabel.textContent = `Cursor: ${label}`;
+        }
+      });
+    }
+
+    function updateHeaderTodaySales() {
+      const todayKey = getLocalDateKey();
+      const total = appState.bills
+        .filter(b => getLocalDateKey(b.createdAt) === todayKey)
+        .reduce((sum, b) => sum + safeNum(b.grandTotal, 0), 0);
+      const el = document.getElementById('header-today-sales');
+      if (el) el.textContent = formatCurrency(total);
+    }
+
+    function updateNavBadges() {
+      const occCount = Object.values(appState.tables).filter(t => t && t.items && t.items.length > 0).length;
+      const occBadge = document.getElementById('nav-occupied-badge');
+      if (occBadge) {
+        occBadge.textContent = occCount;
+        occBadge.classList.toggle('hidden', occCount === 0);
+      }
+
+      const soldOutCount = appState.menu.filter(m => !m.available).length;
+      const soldBadge = document.getElementById('nav-soldout-badge');
+      if (soldBadge) {
+        soldBadge.textContent = soldOutCount;
+        soldBadge.classList.toggle('hidden', soldOutCount === 0);
+      }
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const dateEl = document.getElementById('live-date');
+      const clockEl = document.getElementById('live-clock');
+      if (dateEl) {
+        dateEl.textContent = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      if (clockEl) {
+        clockEl.textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      }
+    }
+
+    function setupGlobalShortcuts() {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const previewOpen = !document.getElementById('print-preview-modal')?.classList.contains('hidden');
+          const modalOpen = !document.getElementById('modal-backdrop')?.classList.contains('hidden');
+          if (previewOpen) {
+            closePrintPreviewModal();
+          } else if (modalOpen) {
+            closeAllModals();
+          } else if (posOrder.editingBillId) {
+            cancelEditMode();
+          }
+          return;
+        }
+
+        if (e.key === 'F2') {
+          e.preventDefault();
+          if (currentView !== 'pos') switchView('pos');
+          const inp = document.getElementById('fast-item-input');
+          inp?.focus();
+          inp?.select();
+        } else if (e.key === 'F4' && currentView === 'pos') {
+          e.preventDefault();
+          handlePrintKotAndHold();
+        } else if ((e.key === 'F8' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p')) && currentView === 'pos') {
+          e.preventDefault();
+          handleSettleAndPrint();
+        } else if (e.key === 'F9' && currentView === 'pos') {
+          e.preventDefault();
+          clearCurrentOrder(true);
+        }
+      });
+    }
+
+    function refreshEntireUI() {
+      applySidebarTheme(appState.settings.sidebarTheme || 'slate');
+      applyHighlightColor(appState.settings.highlightColor || 'orange');
+      populateSettingsForm();
+      syncStickyTogglesToPos();
+      renderPosCategoryTabs();
+      renderPosMenuGrid();
+      renderOrderTypeUI();
+      renderCart();
+      renderLiveTables();
+      renderMenuManager();
+      renderReports();
+      updateHeaderTodaySales();
+      updateNavBadges();
+      updatePrinterStatusUI();
+    }
+
+    // ------------------------------------------------------------
+    // 15. INITIALIZE APPLICATION ON LOAD
+    // ------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      setupFastKeyboardEntry();
+      setupReportsTableDelegation();
+      setupLiveCursorTracker();
+      setupGlobalShortcuts();
+      refreshEntireUI();
+      autoReconnectDirectPrinter();
+      updateClock();
+      setInterval(updateClock, 1000);
+      setTimeout(() => document.getElementById('fast-item-input')?.focus(), 100);
+    });
+  </script>
+</body>
+</html>
